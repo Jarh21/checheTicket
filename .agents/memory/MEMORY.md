@@ -1,0 +1,2 @@
+- [Expo packaging versions](expo-pkg-versions.md) — expo-print/expo-sharing @57.x work with Expo 54; ~15.x/~14.x versions cause ENOENT tmp dir crash in pnpm.
+- [MikroTik REST direct](mikrotik-rest.md) — App calls MikroTik REST API directly (no backend proxy); base64 auth via pure-JS encoder, not btoa (safer cross-RN compat).
