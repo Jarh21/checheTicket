@@ -123,7 +123,10 @@ export default function TabLayout() {
   if (isLoading) return null;
   if (!isAuthenticated) return <Redirect href="/login" />;
 
-  if (isLiquidGlassAvailable()) {
+  // NativeTabs uses Apple's SF Symbols and is only supported on iOS.
+  // On Android (including Expo Go), use the classic tab bar so the
+  // Feather icons render correctly.
+  if (Platform.OS === 'ios' && isLiquidGlassAvailable()) {
     return <NativeTabLayout />;
   }
   return <ClassicTabLayout />;

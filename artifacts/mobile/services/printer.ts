@@ -1,7 +1,8 @@
 import { Ticket } from '@/types';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+// The legacy API remains the compatible API for simple file sharing in Expo Go.
+import * as FileSystem from 'expo-file-system/legacy';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString('es', {
