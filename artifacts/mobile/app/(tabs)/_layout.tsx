@@ -1,41 +1,12 @@
 import React from 'react';
-import { Platform, StyleSheet, useColorScheme, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
-import { Feather } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import { isLiquidGlassAvailable } from 'expo-glass-effect';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Redirect, Tabs } from 'expo-router';
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
-import { SymbolView } from 'expo-symbols';
 import { useAuth } from '@/contexts/AuthContext';
-
-function NativeTabLayout() {
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: 'house', selected: 'house.fill' }} />
-        <Label>Inicio</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="plans">
-        <Icon sf={{ default: 'list.bullet', selected: 'list.bullet' }} />
-        <Label>Planes</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="history">
-        <Icon sf={{ default: 'clock', selected: 'clock.fill' }} />
-        <Label>Historial</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings">
-        <Icon sf={{ default: 'gearshape', selected: 'gearshape.fill' }} />
-        <Label>Ajustes</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
-}
 
 function ClassicTabLayout() {
   const colors = useColors();
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
   const isIOS = Platform.OS === 'ios';
   const isWeb = Platform.OS === 'web';
 
@@ -55,11 +26,7 @@ function ClassicTabLayout() {
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView
-              intensity={80}
-              tint={isDark ? 'dark' : 'dark'}
-              style={StyleSheet.absoluteFill}
-            />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />
           ) : isWeb ? (
             <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />
           ) : null,
@@ -71,9 +38,9 @@ function ClassicTabLayout() {
           title: 'Inicio',
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="house" tintColor={color} size={22} />
+              <MaterialCommunityIcons name="home-outline" size={22} color={color} />
             ) : (
-              <Feather name="home" size={22} color={color} />
+              <MaterialCommunityIcons name="home-outline" size={22} color={color} />
             ),
         }}
       />
@@ -83,9 +50,9 @@ function ClassicTabLayout() {
           title: 'Planes',
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="list.bullet" tintColor={color} size={22} />
+              <MaterialCommunityIcons name="format-list-bulleted" size={22} color={color} />
             ) : (
-              <Feather name="list" size={22} color={color} />
+              <MaterialCommunityIcons name="format-list-bulleted" size={22} color={color} />
             ),
         }}
       />
@@ -95,9 +62,9 @@ function ClassicTabLayout() {
           title: 'Historial',
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="clock" tintColor={color} size={22} />
+              <MaterialCommunityIcons name="clock-outline" size={22} color={color} />
             ) : (
-              <Feather name="clock" size={22} color={color} />
+              <MaterialCommunityIcons name="clock-outline" size={22} color={color} />
             ),
         }}
       />
@@ -107,9 +74,9 @@ function ClassicTabLayout() {
           title: 'Ajustes',
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="gearshape" tintColor={color} size={22} />
+              <MaterialCommunityIcons name="cog-outline" size={22} color={color} />
             ) : (
-              <Feather name="settings" size={22} color={color} />
+              <MaterialCommunityIcons name="cog-outline" size={22} color={color} />
             ),
         }}
       />
@@ -123,11 +90,7 @@ export default function TabLayout() {
   if (isLoading) return null;
   if (!isAuthenticated) return <Redirect href="/login" />;
 
-  // NativeTabs uses Apple's SF Symbols and is only supported on iOS.
-  // On Android (including Expo Go), use the classic tab bar so the
-  // Feather icons render correctly.
-  if (Platform.OS === 'ios' && isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
+  // Android is the current target. Keep the classic tab bar and bundled
+  // MaterialCommunityIcons so no iOS SF Symbols are needed in Expo Go.
   return <ClassicTabLayout />;
 }

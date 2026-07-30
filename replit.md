@@ -46,6 +46,7 @@ App móvil (Expo/React Native) para administrar usuarios de hotspot MikroTik Rou
 - Impresora: MP58-040, 58mm, Bluetooth (ESC/POS)
 - La impresión actual usa expo-print (sistema). ESC/POS nativo requiere build personalizado
 - Un solo administrador, sin multi-usuario
+- Plataforma objetivo actual: Android; la navegación usa MaterialCommunityIcons compatibles con Expo Go
 - Tema: oscuro forzado (red/tech)
 - Idioma: Español
 
