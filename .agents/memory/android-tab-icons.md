@@ -7,4 +7,4 @@ The current mobile release targets Android and Expo Go. Its tab bar should use t
 
 **Why:** NativeTabs and SF Symbols can produce blank tab icons when the app is run on Android through Expo Go.
 
-**How to apply:** Keep the Android tab layout on MaterialCommunityIcons and verify a fresh Expo Go reload after navigation changes.
+**How to apply:** Keep the Android tab layout on MaterialCommunityIcons, explicitly load `...Feather.font` and `...MaterialCommunityIcons.font` in the root font gate, and verify a fresh Expo Go reload after navigation changes.
