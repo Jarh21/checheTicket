@@ -73,19 +73,12 @@ export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { config, saveConfig } = useConfig();
-  const { logout, changePassword } = useAuth();
+  const { logout, session } = useAuth();
 
   const [form, setForm] = useState<MikroTikConfig>(config);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
-
-  // Change password fields
-  const [currentPwd, setCurrentPwd] = useState('');
-  const [newPwd, setNewPwd] = useState('');
-  const [confirmPwd, setConfirmPwd] = useState('');
-  const [pwdError, setPwdError] = useState('');
-  const [pwdSaving, setPwdSaving] = useState(false);
 
   useEffect(() => {
     setForm(config);
@@ -123,35 +116,6 @@ export default function SettingsScreen() {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setSaving(false);
     Alert.alert('Guardado', 'Configuración guardada correctamente');
-  }
-
-  async function handleChangePassword() {
-    setPwdError('');
-    if (!currentPwd || !newPwd || !confirmPwd) {
-      setPwdError('Completa todos los campos');
-      return;
-    }
-    if (newPwd.length < 4) {
-      setPwdError('Mínimo 4 caracteres');
-      return;
-    }
-    if (newPwd !== confirmPwd) {
-      setPwdError('Las contraseñas no coinciden');
-      return;
-    }
-    setPwdSaving(true);
-    const ok = await changePassword(currentPwd, newPwd);
-    setPwdSaving(false);
-    if (!ok) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setPwdError('Contraseña actual incorrecta');
-    } else {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setCurrentPwd('');
-      setNewPwd('');
-      setConfirmPwd('');
-      Alert.alert('Listo', 'Contraseña actualizada');
-    }
   }
 
   const paddingTop = insets.top + (Platform.OS === 'web' ? 67 : 0);
@@ -284,52 +248,26 @@ export default function SettingsScreen() {
         </View>
       </View>
 
-      {/* Change password card */}
+      {/* License status card */}
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.sectionHeader}>
-          <Feather name="lock" size={20} color={colors.primary} />
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Contraseña Admin</Text>
+          <MaterialCommunityIcons name="certificate-outline" size={20} color={colors.primary} />
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Licencia de acceso</Text>
         </View>
-
-        <SettingInput
-          label="Contraseña actual"
-          value={currentPwd}
-          onChangeText={(t) => { setCurrentPwd(t); setPwdError(''); }}
-          secureTextEntry
-        />
-        <SettingInput
-          label="Nueva contraseña"
-          value={newPwd}
-          onChangeText={(t) => { setNewPwd(t); setPwdError(''); }}
-          secureTextEntry
-        />
-        <SettingInput
-          label="Confirmar nueva contraseña"
-          value={confirmPwd}
-          onChangeText={(t) => { setConfirmPwd(t); setPwdError(''); }}
-          secureTextEntry
-        />
-
-        {pwdError ? (
-          <Text style={[styles.errorText, { color: colors.destructive }]}>{pwdError}</Text>
-        ) : null}
-
-        <Pressable
-          onPress={handleChangePassword}
-          disabled={pwdSaving}
-          style={({ pressed }) => [
-            styles.saveBtn,
-            { backgroundColor: colors.primary, opacity: pressed || pwdSaving ? 0.85 : 1 },
-          ]}
-        >
-          {pwdSaving ? (
-            <ActivityIndicator size="small" color={colors.primaryForeground} />
-          ) : (
-            <Text style={[styles.saveBtnText, { color: colors.primaryForeground }]}>
-              Actualizar Contraseña
-            </Text>
-          )}
-        </Pressable>
+        <Text style={[styles.licenseName, { color: colors.foreground }]}>
+          {session?.account.name ?? 'Cuenta HotSpot'}
+        </Text>
+        <Text style={[styles.licenseEmail, { color: colors.mutedForeground }]}>
+          {session?.account.email ?? 'Sin sesión remota'}
+        </Text>
+        <View style={styles.licenseMeta}>
+          <Text style={[styles.licenseMetaText, { color: colors.mutedForeground }]}>
+            Estado: {session?.license.status === 'active' ? 'Activa' : 'No activa'}
+          </Text>
+          <Text style={[styles.licenseMetaText, { color: colors.mutedForeground }]}>
+            Vence: {session ? new Date(session.license.expiresAt).toLocaleDateString() : '—'}
+          </Text>
+        </View>
       </View>
 
       {/* Logout */}
@@ -420,6 +358,10 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   errorText: { fontSize: 13, fontFamily: 'Inter_400Regular', marginBottom: 4 },
+  licenseName: { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  licenseEmail: { fontSize: 13, fontFamily: 'Inter_400Regular', marginTop: 3 },
+  licenseMeta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, gap: 8 },
+  licenseMetaText: { fontSize: 12, fontFamily: 'Inter_500Medium', flexShrink: 1 },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',

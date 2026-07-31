@@ -2,3 +2,4 @@
 - [MikroTik REST direct](mikrotik-rest.md) — App calls MikroTik REST API directly (no backend proxy); base64 auth via pure-JS encoder, not btoa (safer cross-RN compat).
 - [Expo build source](expo-build-source.md) — EAS monorepo builds must use the current workspace root and branch; Expo version in remote logs identifies stale or wrong source snapshots.
 - [Android tab icons](android-tab-icons.md) — Android/Expo Go uses the classic tabs with bundled MaterialCommunityIcons; avoid SF Symbols and NativeTabs for the current target.
+- [Central license authority](license-platform.md) — mobile access depends on server-validated licenses, sessions, and device limits; local time must never decide expiry.

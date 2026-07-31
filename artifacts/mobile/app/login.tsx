@@ -20,10 +20,10 @@ import { router } from 'expo-router';
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { isAuthenticated, isFirstLaunch, isLoading, login, setupPassword } = useAuth();
+  const { isAuthenticated, isLoading, login } = useAuth();
 
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -45,36 +45,25 @@ export default function LoginScreen() {
 
   async function handleSubmit() {
     setError('');
+    if (!email.trim() || !email.includes('@')) {
+      setError('Ingresa un correo válido');
+      return;
+    }
     if (!password.trim()) {
-      setError('Ingresa una contraseña');
+      setError('Ingresa tu contraseña');
       return;
     }
 
-    if (isFirstLaunch) {
-      if (password.length < 4) {
-        setError('Mínimo 4 caracteres');
-        return;
-      }
-      if (password !== confirmPassword) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        setError('Las contraseñas no coinciden');
-        return;
-      }
-      setSubmitting(true);
-      await setupPassword(password);
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else {
-      setSubmitting(true);
-      const ok = await login(password);
-      if (!ok) {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        setError('Contraseña incorrecta');
-        setPassword('');
-        setSubmitting(false);
-        return;
-      }
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setSubmitting(true);
+    const result = await login(email, password);
+    if (!result.ok) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setError(result.message ?? 'No se pudo iniciar sesión');
+      setPassword('');
+      setSubmitting(false);
+      return;
     }
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setSubmitting(false);
   }
 
@@ -106,15 +95,32 @@ export default function LoginScreen() {
         {/* Card */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.cardTitle, { color: colors.foreground }]}>
-            {isFirstLaunch ? 'Configurar Contraseña' : 'Administrador'}
+            Acceso de cliente
           </Text>
-          {isFirstLaunch && (
-            <Text style={[styles.cardSub, { color: colors.mutedForeground }]}>
-              Crea una contraseña para proteger la app
-            </Text>
-          )}
+          <Text style={[styles.cardSub, { color: colors.mutedForeground }]}>
+            Ingresa con la cuenta y licencia asignadas
+          </Text>
 
-          {/* Password input */}
+          <View
+            style={[
+              styles.inputWrap,
+              { backgroundColor: colors.input, borderColor: error ? colors.destructive : colors.border },
+            ]}
+          >
+            <Feather name="mail" size={18} color={colors.mutedForeground} style={styles.inputIcon} />
+            <TextInput
+              style={[styles.input, { color: colors.foreground }]}
+              placeholder="correo@ejemplo.com"
+              placeholderTextColor={colors.mutedForeground}
+              value={email}
+              onChangeText={(t) => { setEmail(t); setError(''); }}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              returnKeyType="next"
+            />
+          </View>
+
           <View
             style={[
               styles.inputWrap,
@@ -125,44 +131,20 @@ export default function LoginScreen() {
             <TextInput
               ref={inputRef}
               style={[styles.input, { color: colors.foreground }]}
-              placeholder={isFirstLaunch ? 'Nueva contraseña' : 'Contraseña'}
+              placeholder="Contraseña"
               placeholderTextColor={colors.mutedForeground}
               secureTextEntry={!showPwd}
               value={password}
               onChangeText={(t) => { setPassword(t); setError(''); }}
               autoCapitalize="none"
               autoCorrect={false}
-              returnKeyType={isFirstLaunch ? 'next' : 'done'}
-              onSubmitEditing={isFirstLaunch ? undefined : handleSubmit}
+              returnKeyType="done"
+              onSubmitEditing={handleSubmit}
             />
             <Pressable onPress={() => setShowPwd(!showPwd)} hitSlop={10}>
               <Feather name={showPwd ? 'eye-off' : 'eye'} size={18} color={colors.mutedForeground} />
             </Pressable>
           </View>
-
-          {/* Confirm password (first launch only) */}
-          {isFirstLaunch && (
-            <View
-              style={[
-                styles.inputWrap,
-                { backgroundColor: colors.input, borderColor: error ? colors.destructive : colors.border },
-              ]}
-            >
-              <Feather name="lock" size={18} color={colors.mutedForeground} style={styles.inputIcon} />
-              <TextInput
-                style={[styles.input, { color: colors.foreground }]}
-                placeholder="Confirmar contraseña"
-                placeholderTextColor={colors.mutedForeground}
-                secureTextEntry={!showPwd}
-                value={confirmPassword}
-                onChangeText={(t) => { setConfirmPassword(t); setError(''); }}
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="done"
-                onSubmitEditing={handleSubmit}
-              />
-            </View>
-          )}
 
           {error ? (
             <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
@@ -181,7 +163,7 @@ export default function LoginScreen() {
               <ActivityIndicator color={colors.primaryForeground} />
             ) : (
               <Text style={[styles.submitText, { color: colors.primaryForeground }]}>
-                {isFirstLaunch ? 'Crear Contraseña' : 'Ingresar'}
+                Ingresar
               </Text>
             )}
           </Pressable>

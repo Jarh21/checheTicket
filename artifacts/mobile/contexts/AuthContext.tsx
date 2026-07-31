@@ -1,67 +1,80 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { getItem, setItem, STORAGE_KEYS } from '@/services/storage';
+import type { LicenseSession } from '@workspace/api-client-react';
+import {
+  loginWithLicense,
+  logoutLicenseSession,
+  restoreLicenseSession,
+} from '@/services/license';
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  isFirstLaunch: boolean;
   isLoading: boolean;
-  login: (password: string) => Promise<boolean>;
-  logout: () => void;
-  setupPassword: (password: string) => Promise<void>;
-  changePassword: (currentPwd: string, newPwd: string) => Promise<boolean>;
+  session: LicenseSession | null;
+  login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    if (error.message.includes('401')) return 'Correo, contraseña o licencia inválidos';
+    if (error.message.includes('403')) return 'La licencia no permite acceder desde este dispositivo';
+    return 'No se pudo verificar la licencia. Revisa tu conexión a internet';
+  }
+  return 'No se pudo iniciar sesión';
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isFirstLaunch, setIsFirstLaunch] = useState(false);
+  const [session, setSession] = useState<LicenseSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    (async () => {
-      const stored = await getItem<string>(STORAGE_KEYS.AUTH_PASSWORD);
-      setIsFirstLaunch(!stored);
-      setIsLoading(false);
-    })();
+    let mounted = true;
+    void restoreLicenseSession().then((restored) => {
+      if (mounted) {
+        setSession(restored);
+        setIsLoading(false);
+      }
+    });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  async function login(password: string): Promise<boolean> {
-    const stored = await getItem<string>(STORAGE_KEYS.AUTH_PASSWORD);
-    if (password === stored) {
-      setIsAuthenticated(true);
-      return true;
+  useEffect(() => {
+    if (!session) return;
+    const interval = setInterval(() => {
+      void restoreLicenseSession().then((refreshed) => {
+        setSession(refreshed);
+      });
+    }, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [session?.license.id]);
+
+  async function login(email: string, password: string) {
+    try {
+      const nextSession = await loginWithLicense(email, password);
+      setSession(nextSession);
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error) };
     }
-    return false;
   }
 
-  function logout() {
-    setIsAuthenticated(false);
-  }
-
-  async function setupPassword(password: string): Promise<void> {
-    await setItem(STORAGE_KEYS.AUTH_PASSWORD, password);
-    setIsFirstLaunch(false);
-    setIsAuthenticated(true);
-  }
-
-  async function changePassword(currentPwd: string, newPwd: string): Promise<boolean> {
-    const stored = await getItem<string>(STORAGE_KEYS.AUTH_PASSWORD);
-    if (currentPwd !== stored) return false;
-    await setItem(STORAGE_KEYS.AUTH_PASSWORD, newPwd);
-    return true;
+  async function logout() {
+    await logoutLicenseSession();
+    setSession(null);
   }
 
   return (
     <AuthContext.Provider
       value={{
-        isAuthenticated,
-        isFirstLaunch,
+        isAuthenticated: Boolean(session),
         isLoading,
+        session,
         login,
         logout,
-        setupPassword,
-        changePassword,
       }}
     >
       {children}
@@ -70,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
-  return ctx;
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  return context;
 }

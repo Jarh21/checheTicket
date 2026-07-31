@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const STORAGE_KEYS = {
-  AUTH_PASSWORD: '@hotspot/auth_password',
+  LICENSE_TOKEN: '@hotspot/license_token',
+  LICENSE_DEVICE_ID: '@hotspot/license_device_id',
   MIKROTIK_CONFIG: '@hotspot/mikrotik_config',
   PLANS: '@hotspot/plans',
   TICKETS: '@hotspot/tickets',

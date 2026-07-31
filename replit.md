@@ -5,32 +5,40 @@ App móvil (Expo/React Native) para administrar usuarios de hotspot MikroTik Rou
 ## Run & Operate
 
 - `pnpm --filter @workspace/mobile run dev` — Expo dev server (escanear QR con Expo Go)
-- `pnpm --filter @workspace/api-server run dev` — API Server Express (puerto 5000)
+- `pnpm --filter @workspace/api-server run dev` — API Server Express (usa `PORT`)
 - `pnpm run typecheck` — typecheck completo de todos los paquetes
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
 - Mobile: Expo SDK 54, React Native, Expo Router (file-based routing)
-- Estado: React Context + AsyncStorage (sin backend para datos de la app)
+- Estado: React Context + AsyncStorage para configuración local, planes y tickets
 - API MikroTik: HTTP directo a la red local (REST API RouterOS v7)
 - Impresión: expo-print (HTML/PDF), expo-sharing (compartir texto)
-- Autenticación: PIN local en AsyncStorage
+- Autenticación: licencia central por correo/contraseña, token de sesión opaco y verificación remota
 
 ## Módulos de la App
 
-- **Login** — Contraseña admin local (primera vez: configurar; después: login)
+- **Login** — Correo y contraseña de cliente, con validación de licencia y dispositivo
 - **Panel (Dashboard)** — Estadísticas, selector de plan, generación de ticket
 - **Planes** — CRUD de planes (horas/días, precio, velocidad up/down en Mbps)
 - **Historial** — Tickets activos/vencidos, reimpresión, limpieza de vencidos
-- **Ajustes** — Credenciales MikroTik (IP, usuario, contraseña, hotspot server, WiFi name)
+- **Ajustes** — Credenciales MikroTik, datos de licencia y cierre de sesión
 
 ## Arquitectura
 
-- Sin backend propio — la app llama directo a la REST API del MikroTik
+- API central — licencias, cuentas, sesiones y límites de dispositivos viven en PostgreSQL
+- La app sigue llamando directo a la REST API del MikroTik
 - MikroTik REST API: `http://<ip>/rest` con Basic Auth
 - Crear usuario hotspot: `PUT /rest/ip/hotspot/user` con `limit-uptime` y `rate-limit`
 - Credenciales MikroTik + datos de tickets almacenados en AsyncStorage
+- El token de licencia y el identificador del dispositivo se almacenan en AsyncStorage
+
+## Panel de licencias
+
+- `artifacts/license-admin/` — panel web separado para administrar clientes y licencias
+- `pnpm --filter @workspace/license-admin run dev` — panel administrativo
+- En producción, `ADMIN_EMAIL` y `ADMIN_PASSWORD` son obligatorios; no se permite el administrador por defecto
 
 ## Where things live
 

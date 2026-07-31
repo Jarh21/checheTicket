@@ -1,22 +1,21 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 0.2.0
+  description: API central de licencias para HotSpot Manager
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: admin
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +23,341 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /auth/login:
+    post:
+      operationId: loginLicense
+      tags: [auth]
+      summary: Inicia sesión de un cliente con licencia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LicenseLoginRequest"
+      responses:
+        "200":
+          description: Sesión iniciada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LicenseLoginResponse"
+        "401":
+          description: Credenciales o licencia inválidas
+        "403":
+          description: Dispositivo no autorizado
+  /auth/me:
+    get:
+      operationId: getLicenseSession
+      tags: [auth]
+      summary: Consulta la licencia de la sesión actual
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Sesión actual
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LicenseSession"
+        "401":
+          description: Sesión inválida o vencida
+  /auth/logout:
+    post:
+      operationId: logoutLicense
+      tags: [auth]
+      summary: Cierra la sesión actual
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Sesión cerrada
+  /admin/auth/login:
+    post:
+      operationId: loginAdmin
+      tags: [admin]
+      summary: Inicia sesión del administrador
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginRequest"
+      responses:
+        "200":
+          description: Sesión de administrador
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminLoginResponse"
+        "401":
+          description: Credenciales inválidas
+  /admin/auth/logout:
+    post:
+      operationId: logoutAdmin
+      tags: [admin]
+      summary: Cierra la sesión del administrador
+      security:
+        - bearerAuth: []
+      responses:
+        "204":
+          description: Sesión cerrada
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      summary: Resumen del estado de licencias
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Resumen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+        "401":
+          description: No autorizado
+  /admin/licenses:
+    get:
+      operationId: listLicenses
+      tags: [admin]
+      summary: Lista las licencias
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Licencias
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/License"
+        "401":
+          description: No autorizado
+    post:
+      operationId: createLicense
+      tags: [admin]
+      summary: Crea una cuenta y su licencia
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLicenseRequest"
+      responses:
+        "201":
+          description: Licencia creada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/License"
+        "400":
+          description: Datos inválidos
+        "409":
+          description: El correo ya existe
+  /admin/licenses/{licenseId}:
+    patch:
+      operationId: updateLicense
+      tags: [admin]
+      summary: Actualiza datos o estado de una licencia
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LicenseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLicenseRequest"
+      responses:
+        "200":
+          description: Licencia actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/License"
+        "404":
+          description: Licencia no encontrada
+  /admin/licenses/{licenseId}/renew:
+    post:
+      operationId: renewLicense
+      tags: [admin]
+      summary: Renueva una licencia por días
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LicenseId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RenewLicenseRequest"
+      responses:
+        "200":
+          description: Licencia renovada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/License"
+        "404":
+          description: Licencia no encontrada
+  /admin/licenses/{licenseId}/devices:
+    get:
+      operationId: listLicenseDevices
+      tags: [admin]
+      summary: Lista dispositivos de una licencia
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LicenseId"
+      responses:
+        "200":
+          description: Dispositivos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Device"
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    LicenseId:
+      name: licenseId
+      in: path
+      required: true
+      schema:
+        type: string
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
-
+    LicenseLoginRequest:
+      type: object
+      required: [email, password, deviceId]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+          minLength: 1
+        deviceId:
+          type: string
+          minLength: 1
+          maxLength: 255
+        deviceName:
+          type: string
+          maxLength: 255
+    LicenseLoginResponse:
+      type: object
+      required: [token, session]
+      properties:
+        token:
+          type: string
+        session:
+          $ref: "#/components/schemas/LicenseSession"
+    LicenseSession:
+      type: object
+      required: [account, license, serverTime]
+      properties:
+        account:
+          $ref: "#/components/schemas/Account"
+        license:
+          $ref: "#/components/schemas/License"
+        serverTime:
+          type: string
+          format: date-time
+    Account:
+      type: object
+      required: [id, email, name, status]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        name: { type: string }
+        company: { type: string }
+        phone: { type: string }
+        status: { type: string }
+    License:
+      type: object
+      required: [id, accountId, email, name, status, startsAt, expiresAt, maxDevices, deviceCount]
+      properties:
+        id: { type: string }
+        accountId: { type: string }
+        email: { type: string }
+        name: { type: string }
+        company: { type: string }
+        phone: { type: string }
+        status: { type: string, enum: [active, suspended, expired] }
+        startsAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time }
+        maxDevices: { type: integer }
+        deviceCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AdminLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string }
+        password: { type: string, minLength: 1 }
+    AdminLoginResponse:
+      type: object
+      required: [token, email]
+      properties:
+        token: { type: string }
+        email: { type: string }
+    CreateLicenseRequest:
+      type: object
+      required: [email, password, name, durationDays]
+      properties:
+        email: { type: string }
+        password: { type: string, minLength: 6 }
+        name: { type: string, minLength: 1, maxLength: 255 }
+        company: { type: string, maxLength: 255 }
+        phone: { type: string, maxLength: 80 }
+        durationDays: { type: integer, minimum: 1, maximum: 3650 }
+        maxDevices: { type: integer, minimum: 1, maximum: 20, default: 1 }
+    UpdateLicenseRequest:
+      type: object
+      properties:
+        name: { type: string, minLength: 1, maxLength: 255 }
+        company: { type: string, maxLength: 255 }
+        phone: { type: string, maxLength: 80 }
+        status: { type: string, enum: [active, suspended] }
+        maxDevices: { type: integer, minimum: 1, maximum: 20 }
+    RenewLicenseRequest:
+      type: object
+      required: [durationDays]
+      properties:
+        durationDays: { type: integer, minimum: 1, maximum: 3650 }
+    Device:
+      type: object
+      required: [id, deviceId, deviceName, lastSeenAt, createdAt, revoked]
+      properties:
+        id: { type: string }
+        deviceId: { type: string }
+        deviceName: { type: string }
+        lastSeenAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        revoked: { type: boolean }
+    AdminDashboard:
+      type: object
+      required: [total, active, expiringSoon, expired, suspended, devices]
+      properties:
+        total: { type: integer }
+        active: { type: integer }
+        expiringSoon: { type: integer }
+        expired: { type: integer }
+        suspended: { type: integer }
+        devices: { type: integer }

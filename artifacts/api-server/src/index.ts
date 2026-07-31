@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { ensureAdminController } from "./controllers/admin-controller";
 
 const rawPort = process.env["PORT"];
 
@@ -15,11 +16,16 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
+ensureAdminController()
+  .then(() => app.listen(port, (err) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);
   }
 
   logger.info({ port }, "Server listening");
-});
+  }))
+  .catch((err: unknown) => {
+    logger.error({ err }, "Error preparing server");
+    process.exit(1);
+  });
