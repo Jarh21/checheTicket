@@ -18,6 +18,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function errorMessage(error: unknown): string {
   if (error instanceof Error) {
+    const apiMessage = error.message.match(/HTTP \d+ [^:]+:\s*(.+)$/)?.[1];
+    if (apiMessage) return apiMessage;
     if (error.message.includes('401')) return 'Correo, contraseña o licencia inválidos';
     if (error.message.includes('403')) return 'La licencia no permite acceder desde este dispositivo';
     return 'No se pudo verificar la licencia. Revisa tu conexión a internet';
