@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "HotSpot Manager",
-    "slug": "mobile",
+    "name": "tu-ticket-wifi",
+    "slug": "tuticketwifi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
+    "scheme": "tuticketwifi",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
@@ -14,10 +14,12 @@
       "backgroundColor": "#0A0F1E"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tuticketwifi.app"
     },
     "android": {
-      "softwareKeyboardLayoutMode": "pan"
+      "softwareKeyboardLayoutMode": "pan",
+      "package": "com.tuticketwifi.app"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
