@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useSyncExternalStore } from 'react';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import LoginPage from '@/pages/login';
 import DashboardPage from '@/pages/dashboard';
 import { Route, Switch, Router as WouterRouter } from 'wouter';
-import { getAdminToken } from '@/lib/auth';
+import { getAdminToken, subscribeAdminAuth } from '@/lib/auth';
 import { setAuthTokenGetter } from '@workspace/api-client-react';
 
 // Configure API client to include admin bearer token
@@ -21,7 +22,11 @@ const queryClient = new QueryClient({
 });
 
 function Router() {
-  const isAuthenticated = !!getAdminToken();
+  const isAuthenticated = useSyncExternalStore(
+    subscribeAdminAuth,
+    () => !!getAdminToken(),
+    () => false,
+  );
 
   return (
     <Switch>

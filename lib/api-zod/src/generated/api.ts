@@ -15,7 +15,6 @@ export const HealthCheckResponse = zod.object({
   "status": zod.string()
 })
 
-
 /**
  * @summary Inicia sesión de un cliente con licencia
  */
@@ -210,6 +209,10 @@ export const UpdateLicenseParams = zod.object({
   "licenseId": zod.coerce.string()
 })
 
+export const updateLicenseBodyEmailMin = 3;
+
+export const updateLicenseBodyPasswordMin = 6;
+
 export const updateLicenseBodyNameMax = 255;
 
 export const updateLicenseBodyCompanyMax = 255;
@@ -221,6 +224,8 @@ export const updateLicenseBodyMaxDevicesMax = 20;
 
 
 export const UpdateLicenseBody = zod.object({
+  "email": zod.string().min(updateLicenseBodyEmailMin).optional(),
+  "password": zod.string().min(updateLicenseBodyPasswordMin).optional(),
   "name": zod.string().min(1).max(updateLicenseBodyNameMax).optional(),
   "company": zod.string().max(updateLicenseBodyCompanyMax).optional(),
   "phone": zod.string().max(updateLicenseBodyPhoneMax).optional(),

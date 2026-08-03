@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import {
   adminUsersTable,
   accountsTable,
@@ -157,6 +157,8 @@ export async function createLicense(input: {
 export async function updateLicense(
   licenseId: string,
   input: {
+    email?: string;
+    password?: string;
     name?: string;
     company?: string;
     phone?: string;
@@ -171,8 +173,27 @@ export async function updateLicense(
     .limit(1);
   if (!license) throw new AppError(404, "Licencia no encontrada");
 
+  const normalizedEmail =
+    input.email !== undefined ? normalizeEmail(input.email) : undefined;
+  if (normalizedEmail !== undefined) {
+    const [existingAccount] = await db
+      .select({ id: accountsTable.id })
+      .from(accountsTable)
+      .where(
+        and(
+          eq(accountsTable.email, normalizedEmail),
+          ne(accountsTable.id, license.accountId),
+        ),
+      )
+      .limit(1);
+    if (existingAccount) throw new AppError(409, "El correo ya está registrado");
+  }
+
   await db.transaction(async (tx) => {
     const accountUpdates: Partial<typeof accountsTable.$inferInsert> = {};
+    if (normalizedEmail !== undefined) accountUpdates.email = normalizedEmail;
+    if (input.password !== undefined)
+      accountUpdates.passwordHash = await hashPassword(input.password);
     if (input.name !== undefined) accountUpdates.name = input.name.trim();
     if (input.company !== undefined)
       accountUpdates.company = input.company.trim() || null;

@@ -32,6 +32,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 const updateLicenseSchema = z.object({
+  email: z.string().email('Correo electrónico inválido'),
+  password: z
+    .string()
+    .min(6, 'La contraseña debe tener al menos 6 caracteres')
+    .optional()
+    .or(z.literal('')),
   name: z.string().min(1).max(255).optional(),
   company: z.string().max(255).optional(),
   phone: z.string().max(80).optional(),
@@ -55,6 +61,8 @@ export function EditLicenseDialog({ license, open, onOpenChange, onSuccess }: Ed
   const form = useForm<UpdateLicenseFormData>({
     resolver: zodResolver(updateLicenseSchema),
     defaultValues: {
+      email: '',
+      password: '',
       name: '',
       company: '',
       phone: '',
@@ -66,6 +74,8 @@ export function EditLicenseDialog({ license, open, onOpenChange, onSuccess }: Ed
   useEffect(() => {
     if (license) {
       form.reset({
+        email: license.email,
+        password: '',
         name: license.name,
         company: license.company || '',
         phone: license.phone || '',
@@ -78,8 +88,11 @@ export function EditLicenseDialog({ license, open, onOpenChange, onSuccess }: Ed
   const onSubmit = (data: UpdateLicenseFormData) => {
     if (!license) return;
 
+    const { password, ...rest } = data;
+    const updateData = password ? { ...rest, password } : rest;
+
     updateLicense.mutate(
-      { licenseId: license.id, data },
+      { licenseId: license.id, data: updateData },
       {
         onSuccess: () => {
           toast({
@@ -114,6 +127,37 @@ export function EditLicenseDialog({ license, open, onOpenChange, onSuccess }: Ed
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Correo Electrónico</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="cliente@ejemplo.com" {...field} data-testid="input-edit-email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nueva Contraseña (Opcional)</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Dejar en blanco para conservarla" {...field} data-testid="input-edit-password" />
+                    </FormControl>
+                    <FormDescription>Al menos 6 caracteres. La contraseña actual no se muestra.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="name"

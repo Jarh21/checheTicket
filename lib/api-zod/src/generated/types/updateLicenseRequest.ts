@@ -8,6 +8,10 @@
 import type { UpdateLicenseRequestStatus } from './updateLicenseRequestStatus';
 
 export interface UpdateLicenseRequest {
+  /** @minLength 3 */
+  email?: string;
+  /** @minLength 6 */
+  password?: string;
   /**
      * @minLength 1
      * @maxLength 255
