@@ -3,3 +3,4 @@
 - [Expo build source](expo-build-source.md) — EAS monorepo builds must use the current workspace root and branch; Expo version in remote logs identifies stale or wrong source snapshots.
 - [Android tab icons](android-tab-icons.md) — Android/Expo Go uses the classic tabs with bundled MaterialCommunityIcons; avoid SF Symbols and NativeTabs for the current target.
 - [Central license authority](license-platform.md) — mobile access depends on server-validated licenses, sessions, and device limits; local time must never decide expiry.
+- [Production publish requirements](production-publish.md) — multi-artifact publishing needs production admin secrets and every configured health path must return 200.
