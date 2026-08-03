@@ -5,6 +5,8 @@
  * API central de licencias para HotSpot Manager
  * OpenAPI spec version: 0.2.0
  */
+import type { DeviceLastAuthOutcome } from './deviceLastAuthOutcome';
+import type { DeviceStatus } from './deviceStatus';
 
 export interface Device {
   id: string;
@@ -13,4 +15,11 @@ export interface Device {
   lastSeenAt: Date;
   createdAt: Date;
   revoked: boolean;
+  status: DeviceStatus;
+  /** @nullable */
+  lastAuthAt: Date | null;
+  /** @nullable */
+  lastAuthOutcome: DeviceLastAuthOutcome;
+  /** @nullable */
+  lastAuthReason: string | null;
 }

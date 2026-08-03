@@ -116,14 +116,43 @@ export const adminUsersTable = pgTable("license_admin_users", {
     .defaultNow(),
 });
 
+export const deviceAuthEventsTable = pgTable(
+  "license_device_auth_events",
+  {
+    id: id("id"),
+    licenseId: text("license_id").references(() => licensesTable.id, {
+      onDelete: "cascade",
+    }),
+    deviceRecordId: text("device_record_id").references(() => devicesTable.id, {
+      onDelete: "set null",
+    }),
+    email: text("email").notNull(),
+    deviceId: text("device_id").notNull(),
+    deviceName: text("device_name"),
+    outcome: text("outcome").notNull(),
+    reason: text("reason").notNull(),
+    httpStatus: integer("http_status").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("license_device_auth_events_created_idx").on(table.createdAt),
+    index("license_device_auth_events_license_idx").on(table.licenseId),
+    index("license_device_auth_events_device_idx").on(table.deviceId),
+  ],
+);
+
 export const insertAccountSchema = createInsertSchema(accountsTable);
 export const insertLicenseSchema = createInsertSchema(licensesTable);
 export const insertDeviceSchema = createInsertSchema(devicesTable);
 export const insertSessionSchema = createInsertSchema(sessionsTable);
 export const insertAdminUserSchema = createInsertSchema(adminUsersTable);
+export const insertDeviceAuthEventSchema = createInsertSchema(deviceAuthEventsTable);
 
 export type Account = typeof accountsTable.$inferSelect;
 export type License = typeof licensesTable.$inferSelect;
 export type Device = typeof devicesTable.$inferSelect;
 export type Session = typeof sessionsTable.$inferSelect;
 export type AdminUser = typeof adminUsersTable.$inferSelect;
+export type DeviceAuthEvent = typeof deviceAuthEventsTable.$inferSelect;

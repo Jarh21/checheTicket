@@ -137,6 +137,27 @@ export interface RenewLicenseRequest {
   durationDays: number;
 }
 
+export type DeviceStatus = typeof DeviceStatus[keyof typeof DeviceStatus];
+
+
+export const DeviceStatus = {
+  authenticated: 'authenticated',
+  failed: 'failed',
+  revoked: 'revoked',
+  pending: 'pending',
+} as const;
+
+/**
+ * @nullable
+ */
+export type DeviceLastAuthOutcome = typeof DeviceLastAuthOutcome[keyof typeof DeviceLastAuthOutcome] | null;
+
+
+export const DeviceLastAuthOutcome = {
+  success: 'success',
+  failure: 'failure',
+} as const;
+
 export interface Device {
   id: string;
   deviceId: string;
@@ -144,6 +165,50 @@ export interface Device {
   lastSeenAt: string;
   createdAt: string;
   revoked: boolean;
+  status: DeviceStatus;
+  /** @nullable */
+  lastAuthAt: string | null;
+  /** @nullable */
+  lastAuthOutcome: DeviceLastAuthOutcome;
+  /** @nullable */
+  lastAuthReason: string | null;
+}
+
+export type DeviceAuthEventOutcome = typeof DeviceAuthEventOutcome[keyof typeof DeviceAuthEventOutcome];
+
+
+export const DeviceAuthEventOutcome = {
+  success: 'success',
+  failure: 'failure',
+} as const;
+
+export interface DeviceAuthEvent {
+  id: string;
+  /** @nullable */
+  licenseId: string | null;
+  email: string;
+  deviceId: string;
+  /** @nullable */
+  deviceName: string | null;
+  outcome: DeviceAuthEventOutcome;
+  reason: string;
+  httpStatus: number;
+  createdAt: string;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface CreateAdminUserRequest {
+  email: string;
+  /**
+     * @minLength 12
+     * @maxLength 255
+     */
+  password: string;
 }
 
 export interface AdminDashboard {

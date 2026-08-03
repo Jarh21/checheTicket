@@ -33,6 +33,8 @@ import { RenewLicenseDialog } from '@/components/renew-license-dialog';
 import { DevicesDialog } from '@/components/devices-dialog';
 import { TableSkeleton } from '@/components/table-skeleton';
 import { clearAdminToken } from '@/lib/auth';
+import { DeviceAuthActivity } from '@/components/device-auth-activity';
+import { AdminUsersList } from '@/components/admin-users-list';
 import {
   Activity,
   AlertCircle,
@@ -299,6 +301,12 @@ export default function DashboardPage() {
               </Table>
             </div>
           )}
+        </div>
+
+        {/* New Modules */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <DeviceAuthActivity />
+          <AdminUsersList />
         </div>
       </main>
 

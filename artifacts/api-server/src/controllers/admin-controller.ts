@@ -2,7 +2,11 @@ import type { Request, Response } from "express";
 import {
   CreateLicenseBody,
   CreateLicenseResponse,
+  CreateAdminUserBody,
+  CreateAdminUserResponse,
   GetAdminDashboardResponse,
+  ListAdminUsersResponse,
+  ListDeviceAuthEventsResponse,
   ListLicenseDevicesParams,
   ListLicenseDevicesResponse,
   ListLicensesResponse,
@@ -18,9 +22,12 @@ import {
 import {
   authenticateAdmin,
   createLicense,
+  createAdminUser,
   ensureAdminUser,
   getDashboard,
   listDevices,
+  listAdminUsers,
+  listDeviceAuthEvents,
   listPublicLicenses,
   renewLicense,
   updateLicense,
@@ -131,6 +138,33 @@ export async function listLicenseDevicesController(
   response.json(
     ListLicenseDevicesResponse.parse(await listDevices(params.data.licenseId)),
   );
+}
+
+export async function listDeviceAuthEventsController(
+  _request: Request,
+  response: Response,
+): Promise<void> {
+  response.json(ListDeviceAuthEventsResponse.parse(await listDeviceAuthEvents()));
+}
+
+export async function listAdminUsersController(
+  _request: Request,
+  response: Response,
+): Promise<void> {
+  response.json(ListAdminUsersResponse.parse(await listAdminUsers()));
+}
+
+export async function createAdminUserController(
+  request: Request,
+  response: Response,
+): Promise<void> {
+  const parsed = CreateAdminUserBody.safeParse(request.body);
+  if (!parsed.success) {
+    response.status(400).json({ error: parsed.error.message });
+    return;
+  }
+  const admin = await createAdminUser(parsed.data);
+  response.status(201).json(CreateAdminUserResponse.parse(admin));
 }
 
 export async function ensureAdminController(): Promise<void> {

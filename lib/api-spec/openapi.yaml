@@ -224,6 +224,61 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Device"
+  /admin/device-auth-events:
+    get:
+      operationId: listDeviceAuthEvents
+      tags: [admin]
+      summary: Lista los intentos de autenticación de dispositivos
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Historial de autenticación móvil
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeviceAuthEvent"
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [admin]
+      summary: Lista usuarios del panel administrativo
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Usuarios administrativos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+    post:
+      operationId: createAdminUser
+      tags: [admin]
+      summary: Registra un usuario del panel administrativo
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAdminUserRequest"
+      responses:
+        "201":
+          description: Usuario administrativo creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+        "400":
+          description: Datos inválidos
+        "409":
+          description: El usuario ya existe
 components:
   securitySchemes:
     bearerAuth:
@@ -343,7 +398,7 @@ components:
         durationDays: { type: integer, minimum: 1, maximum: 3650 }
     Device:
       type: object
-      required: [id, deviceId, deviceName, lastSeenAt, createdAt, revoked]
+      required: [id, deviceId, deviceName, lastSeenAt, createdAt, revoked, status, lastAuthAt, lastAuthOutcome, lastAuthReason]
       properties:
         id: { type: string }
         deviceId: { type: string }
@@ -351,6 +406,36 @@ components:
         lastSeenAt: { type: string, format: date-time }
         createdAt: { type: string, format: date-time }
         revoked: { type: boolean }
+        status: { type: string, enum: [authenticated, failed, revoked, pending] }
+        lastAuthAt: { type: ["string", "null"], format: date-time }
+        lastAuthOutcome: { type: ["string", "null"], enum: [success, failure, null] }
+        lastAuthReason: { type: ["string", "null"] }
+    DeviceAuthEvent:
+      type: object
+      required: [id, licenseId, email, deviceId, deviceName, outcome, reason, httpStatus, createdAt]
+      properties:
+        id: { type: string }
+        licenseId: { type: ["string", "null"] }
+        email: { type: string }
+        deviceId: { type: string }
+        deviceName: { type: ["string", "null"] }
+        outcome: { type: string, enum: [success, failure] }
+        reason: { type: string }
+        httpStatus: { type: integer }
+        createdAt: { type: string, format: date-time }
+    AdminUser:
+      type: object
+      required: [id, email, createdAt]
+      properties:
+        id: { type: string }
+        email: { type: string }
+        createdAt: { type: string, format: date-time }
+    CreateAdminUserRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string }
+        password: { type: string, minLength: 12, maxLength: 255 }
     AdminDashboard:
       type: object
       required: [total, active, expiringSoon, expired, suspended, devices]

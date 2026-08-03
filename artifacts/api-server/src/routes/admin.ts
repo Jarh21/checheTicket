@@ -1,8 +1,11 @@
 import { Router, type IRouter } from "express";
 import {
   createLicenseController,
+  createAdminUserController,
   getAdminDashboardController,
   listLicenseDevicesController,
+  listDeviceAuthEventsController,
+  listAdminUsersController,
   listLicensesController,
   loginAdminController,
   logoutAdminController,
@@ -34,5 +37,8 @@ router.get(
   requireAdmin,
   listLicenseDevicesController,
 );
+router.get("/admin/device-auth-events", requireAdmin, listDeviceAuthEventsController);
+router.get("/admin/users", requireAdmin, listAdminUsersController);
+router.post("/admin/users", requireAdmin, createAdminUserController);
 
 export default router;

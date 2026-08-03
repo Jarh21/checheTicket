@@ -290,6 +290,58 @@ export const ListLicenseDevicesResponseItem = zod.object({
   "deviceName": zod.string(),
   "lastSeenAt": zod.coerce.date(),
   "createdAt": zod.coerce.date(),
-  "revoked": zod.boolean()
+  "revoked": zod.boolean(),
+  "status": zod.enum(['authenticated', 'failed', 'revoked', 'pending']),
+  "lastAuthAt": zod.coerce.date().nullable(),
+  "lastAuthOutcome": zod.union([zod.literal('success'),zod.literal('failure'),zod.literal(null)]).nullable(),
+  "lastAuthReason": zod.string().nullable()
 })
 export const ListLicenseDevicesResponse = zod.array(ListLicenseDevicesResponseItem)
+
+
+/**
+ * @summary Lista los intentos de autenticación de dispositivos
+ */
+export const ListDeviceAuthEventsResponseItem = zod.object({
+  "id": zod.string(),
+  "licenseId": zod.string().nullable(),
+  "email": zod.string(),
+  "deviceId": zod.string(),
+  "deviceName": zod.string().nullable(),
+  "outcome": zod.enum(['success', 'failure']),
+  "reason": zod.string(),
+  "httpStatus": zod.number(),
+  "createdAt": zod.coerce.date()
+})
+export const ListDeviceAuthEventsResponse = zod.array(ListDeviceAuthEventsResponseItem)
+
+
+/**
+ * @summary Lista usuarios del panel administrativo
+ */
+export const ListAdminUsersResponseItem = zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAdminUsersResponse = zod.array(ListAdminUsersResponseItem)
+
+
+/**
+ * @summary Registra un usuario del panel administrativo
+ */
+export const createAdminUserBodyPasswordMin = 12;
+export const createAdminUserBodyPasswordMax = 255;
+
+
+
+export const CreateAdminUserBody = zod.object({
+  "email": zod.string(),
+  "password": zod.string().min(createAdminUserBodyPasswordMin).max(createAdminUserBodyPasswordMax)
+})
+
+export const CreateAdminUserResponse = zod.object({
+  "id": zod.string(),
+  "email": zod.string(),
+  "createdAt": zod.coerce.date()
+})

@@ -1,8 +1,9 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import {
   adminUsersTable,
   accountsTable,
   db,
+  deviceAuthEventsTable,
   devicesTable,
   licensesTable,
 } from "@workspace/db";
@@ -239,12 +240,39 @@ export async function authenticateLicense(input: {
     .where(eq(accountsTable.email, email))
     .limit(1);
   if (!row || !(await verifyPassword(input.password, row.account.passwordHash))) {
+    await recordDeviceAuthEvent({
+      licenseId: row?.license.id,
+      email,
+      deviceId: input.deviceId,
+      deviceName: input.deviceName,
+      outcome: "failure",
+      reason: "Correo o contraseña inválidos",
+      httpStatus: 401,
+    });
     throw new AppError(401, "Correo o contraseña inválidos");
   }
   if (row.account.status !== "active") {
+    await recordDeviceAuthEvent({
+      licenseId: row.license.id,
+      email,
+      deviceId: input.deviceId,
+      deviceName: input.deviceName,
+      outcome: "failure",
+      reason: "La cuenta está suspendida",
+      httpStatus: 403,
+    });
     throw new AppError(403, "La cuenta está suspendida");
   }
   if (row.license.status === "suspended") {
+    await recordDeviceAuthEvent({
+      licenseId: row.license.id,
+      email,
+      deviceId: input.deviceId,
+      deviceName: input.deviceName,
+      outcome: "failure",
+      reason: "La licencia está suspendida",
+      httpStatus: 403,
+    });
     throw new AppError(403, "La licencia está suspendida");
   }
   if (row.license.expiresAt <= new Date()) {
@@ -254,6 +282,15 @@ export async function authenticateLicense(input: {
         .set({ status: "expired" })
         .where(eq(licensesTable.id, row.license.id));
     }
+    await recordDeviceAuthEvent({
+      licenseId: row.license.id,
+      email,
+      deviceId: input.deviceId,
+      deviceName: input.deviceName,
+      outcome: "failure",
+      reason: "La licencia ha vencido",
+      httpStatus: 401,
+    });
     throw new AppError(401, "La licencia ha vencido");
   }
 
@@ -268,6 +305,16 @@ export async function authenticateLicense(input: {
     )
     .limit(1);
   if (existingDevice?.revoked) {
+    await recordDeviceAuthEvent({
+      licenseId: row.license.id,
+      deviceRecordId: existingDevice.id,
+      email,
+      deviceId: input.deviceId,
+      deviceName: input.deviceName || existingDevice.deviceName,
+      outcome: "failure",
+      reason: "Este dispositivo fue revocado",
+      httpStatus: 403,
+    });
     throw new AppError(403, "Este dispositivo fue revocado");
   }
   if (!existingDevice) {
@@ -281,12 +328,34 @@ export async function authenticateLicense(input: {
         ),
       );
     if ((countRows[0]?.count ?? 0) >= row.license.maxDevices) {
+      await recordDeviceAuthEvent({
+        licenseId: row.license.id,
+        email,
+        deviceId: input.deviceId,
+        deviceName: input.deviceName,
+        outcome: "failure",
+        reason: "Se alcanzó el límite de dispositivos",
+        httpStatus: 403,
+      });
       throw new AppError(403, "Se alcanzó el límite de dispositivos");
     }
-    await db.insert(devicesTable).values({
+    const [createdDevice] = await db
+      .insert(devicesTable)
+      .values({
       licenseId: row.license.id,
       deviceId: input.deviceId,
       deviceName: input.deviceName?.trim() || "Dispositivo",
+      })
+      .returning({ id: devicesTable.id });
+    await recordDeviceAuthEvent({
+      licenseId: row.license.id,
+      deviceRecordId: createdDevice?.id,
+      email,
+      deviceId: input.deviceId,
+      deviceName: input.deviceName?.trim() || "Dispositivo",
+      outcome: "success",
+      reason: "Autenticación exitosa",
+      httpStatus: 200,
     });
   } else {
     await db
@@ -296,6 +365,16 @@ export async function authenticateLicense(input: {
         lastSeenAt: new Date(),
       })
       .where(eq(devicesTable.id, existingDevice.id));
+    await recordDeviceAuthEvent({
+      licenseId: row.license.id,
+      deviceRecordId: existingDevice.id,
+      email,
+      deviceId: input.deviceId,
+      deviceName: input.deviceName?.trim() || existingDevice.deviceName,
+      outcome: "success",
+      reason: "Autenticación exitosa",
+      httpStatus: 200,
+    });
   }
 
   const sessionLicense = await getPublicLicense(row.license.id);
@@ -350,7 +429,7 @@ export async function getLicenseSession(accountId: string) {
 
 export async function listDevices(licenseId: string) {
   await getPublicLicense(licenseId);
-  return db
+  const devices = await db
     .select({
       id: devicesTable.id,
       deviceId: devicesTable.deviceId,
@@ -361,7 +440,82 @@ export async function listDevices(licenseId: string) {
     })
     .from(devicesTable)
     .where(eq(devicesTable.licenseId, licenseId))
-    .orderBy(devicesTable.lastSeenAt);
+    .orderBy(desc(devicesTable.lastSeenAt));
+  const events = await db
+    .select({
+      deviceId: deviceAuthEventsTable.deviceId,
+      outcome: deviceAuthEventsTable.outcome,
+      reason: deviceAuthEventsTable.reason,
+      createdAt: deviceAuthEventsTable.createdAt,
+    })
+    .from(deviceAuthEventsTable)
+    .where(eq(deviceAuthEventsTable.licenseId, licenseId))
+    .orderBy(desc(deviceAuthEventsTable.createdAt));
+  const latestByDevice = new Map<string, (typeof events)[number]>();
+  for (const event of events) {
+    if (!latestByDevice.has(event.deviceId)) latestByDevice.set(event.deviceId, event);
+  }
+  return devices.map((device) => {
+    const latest = latestByDevice.get(device.deviceId);
+    return {
+      ...device,
+      status: device.revoked
+        ? "revoked"
+        : latest?.outcome === "success"
+          ? "authenticated"
+          : latest?.outcome === "failure"
+            ? "failed"
+            : "pending",
+      lastAuthAt: latest?.createdAt ?? null,
+      lastAuthOutcome: latest?.outcome ?? null,
+      lastAuthReason: latest?.reason ?? null,
+    };
+  });
+}
+
+export async function recordDeviceAuthEvent(input: {
+  licenseId?: string;
+  deviceRecordId?: string;
+  email: string;
+  deviceId: string;
+  deviceName?: string;
+  outcome: "success" | "failure";
+  reason: string;
+  httpStatus: number;
+}) {
+  try {
+    await db.insert(deviceAuthEventsTable).values({
+      licenseId: input.licenseId ?? null,
+      deviceRecordId: input.deviceRecordId ?? null,
+      email: normalizeEmail(input.email),
+      deviceId: input.deviceId,
+      deviceName: input.deviceName?.trim() || null,
+      outcome: input.outcome,
+      reason: input.reason,
+      httpStatus: input.httpStatus,
+    });
+  } catch (error) {
+    console.error("No se pudo guardar el evento de autenticación", error);
+  }
+}
+
+export async function listDeviceAuthEvents(limit = 100) {
+  const events = await db
+    .select({
+      id: deviceAuthEventsTable.id,
+      licenseId: deviceAuthEventsTable.licenseId,
+      email: deviceAuthEventsTable.email,
+      deviceId: deviceAuthEventsTable.deviceId,
+      deviceName: deviceAuthEventsTable.deviceName,
+      outcome: deviceAuthEventsTable.outcome,
+      reason: deviceAuthEventsTable.reason,
+      httpStatus: deviceAuthEventsTable.httpStatus,
+      createdAt: deviceAuthEventsTable.createdAt,
+    })
+    .from(deviceAuthEventsTable)
+    .orderBy(desc(deviceAuthEventsTable.createdAt))
+    .limit(limit);
+  return events;
 }
 
 export async function getDashboard() {
@@ -402,6 +556,42 @@ export async function authenticateAdmin(emailInput: string, password: string) {
     throw new AppError(401, "Correo o contraseña inválidos");
   }
   return { email: admin.email };
+}
+
+export async function listAdminUsers() {
+  return db
+    .select({
+      id: adminUsersTable.id,
+      email: adminUsersTable.email,
+      createdAt: adminUsersTable.createdAt,
+    })
+    .from(adminUsersTable)
+    .orderBy(desc(adminUsersTable.createdAt));
+}
+
+export async function createAdminUser(input: {
+  email: string;
+  password: string;
+}) {
+  const email = normalizeEmail(input.email);
+  const [existing] = await db
+    .select({ id: adminUsersTable.id })
+    .from(adminUsersTable)
+    .where(eq(adminUsersTable.email, email))
+    .limit(1);
+  if (existing) throw new AppError(409, "El usuario administrador ya existe");
+  const [admin] = await db
+    .insert(adminUsersTable)
+    .values({
+      email,
+      passwordHash: await hashPassword(input.password),
+    })
+    .returning({
+      id: adminUsersTable.id,
+      email: adminUsersTable.email,
+      createdAt: adminUsersTable.createdAt,
+    });
+  return admin;
 }
 
 export async function ensureAdminUser() {
