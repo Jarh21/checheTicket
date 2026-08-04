@@ -101,17 +101,7 @@ function getResponseError(status: number, text: string): string {
   return `Error ${status}: ${text || 'Respuesta vacía del MikroTik'}`;
 }
 
-function makeProfileName(rateLimit: string): string {
-  // Keep the name deterministic so plans with the same speed reuse one profile.
-  let hash = 2166136261;
-  for (let i = 0; i < rateLimit.length; i += 1) {
-    hash ^= rateLimit.charCodeAt(i);
-    hash = Math.imul(hash, 16777619);
-  }
-  return `hotspot-app-${(hash >>> 0).toString(36)}`;
-}
-
-async function ensureHotspotUserProfile(
+async function findHotspotUserProfile(
   config: MikroTikConfig,
   rateLimit: string,
 ): Promise<{ success: boolean; profile?: string; error?: string }> {
@@ -145,39 +135,13 @@ async function ensureHotspotUserProfile(
       return { success: true, profile: matchingProfile.name };
     }
 
-    let profileName = makeProfileName(rateLimit);
-    const conflictingProfile = profiles.find((profile) => profile.name === profileName);
-    if (conflictingProfile && conflictingProfile['rate-limit'] !== rateLimit) {
-      profileName = `${profileName}-${Date.now().toString(36).slice(-5)}`;
-    }
-
-    const createResponse = await fetchWithTimeout(
-      profilesUrl,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: getAuthHeader(config),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: profileName,
-          'rate-limit': rateLimit,
-        }),
-      },
-      10000,
-    );
-
-    if (createResponse.ok) {
-      return { success: true, profile: profileName };
-    }
-
-    return {
-      success: false,
-      error: getResponseError(createResponse.status, await createResponse.text()),
-    };
+    // Do not create a profile here. Some RouterOS v7 REST builds reject
+    // `rate-limit` even on /ip/hotspot/user/profile. A ticket can still be
+    // created with the router's existing default profile.
+    return { success: true, profile: 'default' };
   } catch (error: unknown) {
     const e = error as Error;
-    return { success: false, error: e.message || 'No se pudo configurar el perfil de velocidad' };
+    return { success: false, error: e.message || 'No se pudieron consultar los perfiles de velocidad' };
   }
 }
 
@@ -187,7 +151,7 @@ export async function createHotspotUser(
 ): Promise<CreateUserResult> {
   try {
     const profileResult = params.rateLimit
-      ? await ensureHotspotUserProfile(config, params.rateLimit)
+      ? await findHotspotUserProfile(config, params.rateLimit)
       : { success: true as const, profile: 'default' };
 
     if (!profileResult.success || !profileResult.profile) {
