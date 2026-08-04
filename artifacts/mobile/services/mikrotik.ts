@@ -77,12 +77,18 @@ export interface CreateUserParams {
   rateLimit: string;
 }
 
+interface MikroTikUserProfile {
+  '.id': string;
+  name: string;
+  'rate-limit'?: string;
+}
+
 export interface MikroTikUser {
   '.id': string;
   name: string;
   password: string;
   'limit-uptime'?: string;
-  'rate-limit'?: string;
+  profile?: string;
 }
 
 export interface CreateUserResult {
@@ -91,19 +97,115 @@ export interface CreateUserResult {
   error?: string;
 }
 
+function getResponseError(status: number, text: string): string {
+  return `Error ${status}: ${text || 'Respuesta vacía del MikroTik'}`;
+}
+
+function makeProfileName(rateLimit: string): string {
+  // Keep the name deterministic so plans with the same speed reuse one profile.
+  let hash = 2166136261;
+  for (let i = 0; i < rateLimit.length; i += 1) {
+    hash ^= rateLimit.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `hotspot-app-${(hash >>> 0).toString(36)}`;
+}
+
+async function ensureHotspotUserProfile(
+  config: MikroTikConfig,
+  rateLimit: string,
+): Promise<{ success: boolean; profile?: string; error?: string }> {
+  const profilesUrl = `${getBaseUrl(config)}/ip/hotspot/user/profile`;
+
+  try {
+    const listResponse = await fetchWithTimeout(
+      profilesUrl,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: getAuthHeader(config),
+          'Content-Type': 'application/json',
+        },
+      },
+      8000,
+    );
+
+    if (!listResponse.ok) {
+      return {
+        success: false,
+        error: getResponseError(listResponse.status, await listResponse.text()),
+      };
+    }
+
+    const profiles = (await listResponse.json()) as MikroTikUserProfile[];
+    const matchingProfile = profiles.find(
+      (profile) => profile['rate-limit'] === rateLimit,
+    );
+    if (matchingProfile) {
+      return { success: true, profile: matchingProfile.name };
+    }
+
+    let profileName = makeProfileName(rateLimit);
+    const conflictingProfile = profiles.find((profile) => profile.name === profileName);
+    if (conflictingProfile && conflictingProfile['rate-limit'] !== rateLimit) {
+      profileName = `${profileName}-${Date.now().toString(36).slice(-5)}`;
+    }
+
+    const createResponse = await fetchWithTimeout(
+      profilesUrl,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: getAuthHeader(config),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: profileName,
+          'rate-limit': rateLimit,
+        }),
+      },
+      10000,
+    );
+
+    if (createResponse.ok) {
+      return { success: true, profile: profileName };
+    }
+
+    return {
+      success: false,
+      error: getResponseError(createResponse.status, await createResponse.text()),
+    };
+  } catch (error: unknown) {
+    const e = error as Error;
+    return { success: false, error: e.message || 'No se pudo configurar el perfil de velocidad' };
+  }
+}
+
 export async function createHotspotUser(
   config: MikroTikConfig,
   params: CreateUserParams,
 ): Promise<CreateUserResult> {
   try {
+    const profileResult = params.rateLimit
+      ? await ensureHotspotUserProfile(config, params.rateLimit)
+      : { success: true as const, profile: 'default' };
+
+    if (!profileResult.success || !profileResult.profile) {
+      return {
+        success: false,
+        error: `No se pudo configurar la velocidad del plan: ${
+          profileResult.error || 'perfil no disponible'
+        }`,
+      };
+    }
+
     const body: Record<string, string> = {
       name: params.username,
       password: params.password,
-      profile: 'default',
+      profile: profileResult.profile,
     };
 
     if (params.limitUptime) body['limit-uptime'] = params.limitUptime;
-    if (params.rateLimit) body['rate-limit'] = params.rateLimit;
 
     const response = await fetchWithTimeout(
       `${getBaseUrl(config)}/ip/hotspot/user`,
@@ -123,7 +225,7 @@ export async function createHotspotUser(
       return { success: true, userId: data['.id'] };
     } else {
       const text = await response.text();
-      return { success: false, error: `Error ${response.status}: ${text}` };
+      return { success: false, error: getResponseError(response.status, text) };
     }
   } catch (error: unknown) {
     const e = error as Error;
