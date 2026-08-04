@@ -243,22 +243,76 @@ export async function createHotspotUser(
   }
 }
 
+export interface DeleteUserResult {
+  success: boolean;
+  error?: string;
+}
+
 export async function deleteHotspotUser(
   config: MikroTikConfig,
   userId: string,
-): Promise<boolean> {
+  username?: string,
+): Promise<DeleteUserResult> {
   try {
+    let targetId = userId;
+
+    // Older locally stored tickets may not have saved the RouterOS .id.
+    // Find those users by their stable username before deleting.
+    if (!targetId && username) {
+      const listResponse = await fetchWithTimeout(
+        `${getBaseUrl(config)}/ip/hotspot/user`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: getAuthHeader(config),
+            'Content-Type': 'application/json',
+          },
+        },
+        8000,
+      );
+
+      if (!listResponse.ok) {
+        return {
+          success: false,
+          error: getResponseError(listResponse.status, await listResponse.text()),
+        };
+      }
+
+      const users = (await listResponse.json()) as MikroTikUser[];
+      targetId = users.find((user) => user.name === username)?.['.id'] || '';
+    }
+
+    if (!targetId) {
+      // The user is already absent from MikroTik; desired state is achieved.
+      return { success: true };
+    }
+
     const response = await fetchWithTimeout(
-      `${getBaseUrl(config)}/ip/hotspot/user/${encodeURIComponent(userId)}`,
+      `${getBaseUrl(config)}/ip/hotspot/user/${encodeURIComponent(targetId)}`,
       {
         method: 'DELETE',
         headers: { Authorization: getAuthHeader(config) },
       },
       6000,
     );
-    return response.ok;
-  } catch {
-    return false;
+
+    if (response.ok || response.status === 404) {
+      // 404 means the desired state is already achieved: the user is absent.
+      return { success: true };
+    }
+
+    return {
+      success: false,
+      error: getResponseError(response.status, await response.text()),
+    };
+  } catch (error: unknown) {
+    const e = error as Error;
+    return {
+      success: false,
+      error: e.name === 'AbortError'
+        ? 'Tiempo de conexión agotado al eliminar el usuario de MikroTik.'
+        : e.message || 'No se pudo eliminar el usuario de MikroTik.',
+    };
   }
 }
 

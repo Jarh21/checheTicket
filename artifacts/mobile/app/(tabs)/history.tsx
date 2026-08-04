@@ -17,6 +17,7 @@ import { useConfig } from '@/contexts/ConfigContext';
 import { Ticket } from '@/types';
 import { TicketCard } from '@/components/TicketCard';
 import { GeneratedTicketModal } from '@/components/GeneratedTicketModal';
+import { deleteHotspotUser } from '@/services/mikrotik';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type Filter = 'all' | 'active' | 'expired';
@@ -52,7 +53,19 @@ export default function HistoryScreen() {
         style: 'destructive',
         onPress: async () => {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          if (!config.ip || !config.user) {
+            Alert.alert('Sin configuración', 'Configura el MikroTik antes de eliminar el usuario remoto.');
+            return;
+          }
+
+          const result = await deleteHotspotUser(config, ticket.mikrotikUserId, ticket.username);
+          if (!result.success) {
+            Alert.alert('No se eliminó el ticket', result.error || 'MikroTik no pudo eliminar el usuario.');
+            return;
+          }
+
           await deleteTicket(ticket.id);
+          Alert.alert('Listo', `El usuario "${ticket.username}" se eliminó de MikroTik y del historial.`);
         },
       },
     ]);
@@ -73,8 +86,38 @@ export default function HistoryScreen() {
           style: 'destructive',
           onPress: async () => {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            const removed = await cleanExpired();
-            Alert.alert('Listo', `Se eliminaron ${removed} ticket${removed !== 1 ? 's' : ''} vencido${removed !== 1 ? 's' : ''}.`);
+            if (!config.ip || !config.user) {
+              Alert.alert('Sin configuración', 'Configura el MikroTik antes de limpiar los usuarios vencidos.');
+              return;
+            }
+
+            const results = await Promise.all(
+              tickets
+                .filter(isTicketExpired)
+                .map(async (ticket) => ({
+                  ticket,
+                  result: await deleteHotspotUser(config, ticket.mikrotikUserId, ticket.username),
+                })),
+            );
+            const failed = results.filter(({ result }) => !result.success);
+            const deletedIds = new Set(
+              results
+                .filter(({ result }) => result.success)
+                .map(({ ticket }) => ticket.id),
+            );
+
+            if (deletedIds.size > 0) {
+              await cleanExpired((ticket) => deletedIds.has(ticket.id));
+            }
+
+            if (failed.length > 0) {
+              Alert.alert(
+                'Limpieza incompleta',
+                `Se eliminaron ${deletedIds.size} usuario(s). ${failed.length} permanecen en el historial para reintentar.`,
+              );
+            } else {
+              Alert.alert('Listo', `Se eliminaron ${deletedIds.size} ticket${deletedIds.size !== 1 ? 's' : ''} vencido${deletedIds.size !== 1 ? 's' : ''} de MikroTik y del historial.`);
+            }
           },
         },
       ],

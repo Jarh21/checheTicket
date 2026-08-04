@@ -15,7 +15,7 @@ interface TicketsContextType {
   isLoading: boolean;
   addTicket: (ticket: Omit<Ticket, 'id'>) => Promise<Ticket>;
   deleteTicket: (id: string) => Promise<void>;
-  cleanExpired: () => Promise<number>;
+  cleanExpired: (canRemove?: (ticket: Ticket) => boolean) => Promise<number>;
 }
 
 const TicketsContext = createContext<TicketsContextType | undefined>(undefined);
@@ -47,10 +47,12 @@ export function TicketsProvider({ children }: { children: React.ReactNode }) {
     await save(tickets.filter((t) => t.id !== id));
   }
 
-  async function cleanExpired(): Promise<number> {
-    const active = tickets.filter((t) => !isTicketExpired(t));
-    const removed = tickets.length - active.length;
-    await save(active);
+  async function cleanExpired(canRemove?: (ticket: Ticket) => boolean): Promise<number> {
+    const removable = (ticket: Ticket) =>
+      isTicketExpired(ticket) && (canRemove ? canRemove(ticket) : true);
+    const remaining = tickets.filter((ticket) => !removable(ticket));
+    const removed = tickets.length - remaining.length;
+    await save(remaining);
     return removed;
   }
 
