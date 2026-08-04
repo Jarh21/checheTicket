@@ -15,7 +15,7 @@ import { useColors } from '@/hooks/useColors';
 import { usePlans } from '@/contexts/PlansContext';
 import { useTickets } from '@/contexts/TicketsContext';
 import { useConfig } from '@/contexts/ConfigContext';
-import { Plan } from '@/types';
+import { getPlanProfileName, Plan } from '@/types';
 import { PlanCard } from '@/components/PlanCard';
 import { GeneratedTicketModal } from '@/components/GeneratedTicketModal';
 import { useQuery } from '@tanstack/react-query';
@@ -100,6 +100,7 @@ export default function DashboardScreen() {
         password,
         limitUptime,
         rateLimit,
+        profileName: plan.mikrotikProfile || getPlanProfileName(plan.id),
       });
 
       if (!result.success) {

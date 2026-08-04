@@ -16,7 +16,9 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { usePlans } from '@/contexts/PlansContext';
+import { useConfig } from '@/contexts/ConfigContext';
 import { Plan } from '@/types';
+import { ensureHotspotUserProfile, formatRateLimit } from '@/services/mikrotik';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 
@@ -234,8 +236,10 @@ export default function PlansScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { plans, isLoading, addPlan, updatePlan, deletePlan } = usePlans();
+  const { config, isConfigured } = useConfig();
   const [modalVisible, setModalVisible] = useState(false);
   const [editPlan, setEditPlan] = useState<Plan | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   const paddingTop = insets.top + (Platform.OS === 'web' ? 67 : 0);
 
@@ -249,13 +253,64 @@ export default function PlansScreen() {
       uploadSpeed: Number(form.uploadSpeed),
       downloadSpeed: Number(form.downloadSpeed),
     };
+    let savedPlan: Plan;
     if (editPlan) {
       await updatePlan(editPlan.id, planData);
+      savedPlan = {
+        ...editPlan,
+        ...planData,
+      };
     } else {
-      await addPlan(planData);
+      savedPlan = await addPlan(planData);
     }
+
     setModalVisible(false);
     setEditPlan(null);
+
+    if (isConfigured) {
+      setSyncing(true);
+      const result = await ensurePlanProfile(savedPlan);
+      setSyncing(false);
+      if (!result.success) {
+        Alert.alert('Plan guardado, router no sincronizado', result.error);
+      } else {
+        Alert.alert('Plan sincronizado', `Perfil ${savedPlan.mikrotikProfile} listo en MikroTik.`);
+      }
+    } else {
+      Alert.alert('Plan guardado', 'Configura el MikroTik para sincronizar su perfil de velocidad.');
+    }
+  }
+
+  async function ensurePlanProfile(plan: Plan): Promise<{ success: boolean; error: string }> {
+    if (!isConfigured) {
+      return { success: false, error: 'Configura el MikroTik en Ajustes.' };
+    }
+
+    const result = await ensureHotspotUserProfile(
+      config,
+      plan.mikrotikProfile || `app-plan-${plan.id}`,
+      formatRateLimit(plan.uploadSpeed, plan.downloadSpeed),
+    );
+    return result.success
+      ? { success: true, error: '' }
+      : { success: false, error: result.error || 'No se pudo sincronizar el perfil.' };
+  }
+
+  async function syncAllPlans() {
+    if (!isConfigured) {
+      Alert.alert('Sin configuración', 'Configura el MikroTik en Ajustes para sincronizar los perfiles.');
+      return;
+    }
+
+    setSyncing(true);
+    const results = await Promise.all(plans.map((plan) => ensurePlanProfile(plan)));
+    setSyncing(false);
+    const failed = results.filter((result) => !result.success);
+    if (failed.length > 0) {
+      Alert.alert('Sincronización incompleta', failed[0].error);
+    } else {
+      Alert.alert('Perfiles sincronizados', `${plans.length} perfil(es) actualizado(s) en MikroTik.`);
+    }
   }
 
   function handleDelete(plan: Plan) {
@@ -287,6 +342,20 @@ export default function PlansScreen() {
             {plans.length} plan{plans.length !== 1 ? 'es' : ''}
           </Text>
         </View>
+        <Pressable
+          onPress={syncAllPlans}
+          disabled={syncing || isLoading || plans.length === 0}
+          style={({ pressed }) => [
+            styles.syncBtn,
+            { borderColor: colors.border, opacity: pressed || syncing ? 0.55 : 1 },
+          ]}
+        >
+          {syncing ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <Feather name="refresh-cw" size={19} color={colors.primary} />
+          )}
+        </Pressable>
         <Pressable
           onPress={() => { setEditPlan(null); setModalVisible(true); }}
           style={({ pressed }) => [
@@ -375,6 +444,15 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 28, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
   headerSub: { fontSize: 13, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  syncBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
   addBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, paddingBottom: 60 },
   emptyTitle: { fontSize: 18, fontFamily: 'Inter_600SemiBold' },

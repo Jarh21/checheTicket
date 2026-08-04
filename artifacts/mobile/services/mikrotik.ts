@@ -1,4 +1,4 @@
-import { MikroTikConfig } from '@/types';
+import { getPlanProfileName, MikroTikConfig } from '@/types';
 
 // Pure-JS base64 encoder for React Native compatibility
 function toBase64(str: string): string {
@@ -75,6 +75,7 @@ export interface CreateUserParams {
   password: string;
   limitUptime: string;
   rateLimit: string;
+  profileName: string;
 }
 
 interface MikroTikUserProfile {
@@ -101,8 +102,9 @@ function getResponseError(status: number, text: string): string {
   return `Error ${status}: ${text || 'Respuesta vacía del MikroTik'}`;
 }
 
-async function findHotspotUserProfile(
+export async function ensureHotspotUserProfile(
   config: MikroTikConfig,
+  profileName: string,
   rateLimit: string,
 ): Promise<{ success: boolean; profile?: string; error?: string }> {
   const profilesUrl = `${getBaseUrl(config)}/ip/hotspot/user/profile`;
@@ -128,20 +130,62 @@ async function findHotspotUserProfile(
     }
 
     const profiles = (await listResponse.json()) as MikroTikUserProfile[];
-    const matchingProfile = profiles.find(
-      (profile) => profile['rate-limit'] === rateLimit,
-    );
-    if (matchingProfile) {
-      return { success: true, profile: matchingProfile.name };
+    const existingProfile = profiles.find((profile) => profile.name === profileName);
+    if (existingProfile) {
+      if (existingProfile['rate-limit'] === rateLimit) {
+        return { success: true, profile: profileName };
+      }
+
+      const updateResponse = await fetchWithTimeout(
+        `${profilesUrl}/${encodeURIComponent(existingProfile['.id'])}`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: getAuthHeader(config),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 'rate-limit': rateLimit }),
+        },
+        10000,
+      );
+
+      if (!updateResponse.ok) {
+        return {
+          success: false,
+          error: getResponseError(updateResponse.status, await updateResponse.text()),
+        };
+      }
+
+      return { success: true, profile: profileName };
     }
 
-    // Do not create a profile here. Some RouterOS v7 REST builds reject
-    // `rate-limit` even on /ip/hotspot/user/profile. A ticket can still be
-    // created with the router's existing default profile.
-    return { success: true, profile: 'default' };
+    const createResponse = await fetchWithTimeout(
+      profilesUrl,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: getAuthHeader(config),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: profileName,
+          'rate-limit': rateLimit,
+        }),
+      },
+      10000,
+    );
+
+    if (!createResponse.ok) {
+      return {
+        success: false,
+        error: getResponseError(createResponse.status, await createResponse.text()),
+      };
+    }
+
+    return { success: true, profile: profileName };
   } catch (error: unknown) {
     const e = error as Error;
-    return { success: false, error: e.message || 'No se pudieron consultar los perfiles de velocidad' };
+    return { success: false, error: e.message || 'No se pudo sincronizar el perfil de velocidad' };
   }
 }
 
@@ -150,9 +194,11 @@ export async function createHotspotUser(
   params: CreateUserParams,
 ): Promise<CreateUserResult> {
   try {
-    const profileResult = params.rateLimit
-      ? await findHotspotUserProfile(config, params.rateLimit)
-      : { success: true as const, profile: 'default' };
+    const profileResult = await ensureHotspotUserProfile(
+      config,
+      params.profileName || getPlanProfileName(params.username),
+      params.rateLimit,
+    );
 
     if (!profileResult.success || !profileResult.profile) {
       return {

@@ -6,6 +6,7 @@ export interface Plan {
   price: number;
   uploadSpeed: number; // Mbps
   downloadSpeed: number; // Mbps
+  mikrotikProfile?: string;
 }
 
 export interface Ticket {
@@ -29,4 +30,13 @@ export interface MikroTikConfig {
   password: string;
   hotspotServer: string;
   wifiName: string;
+}
+
+export function getPlanProfileName(planId: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < planId.length; i += 1) {
+    hash ^= planId.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `app-plan-${(hash >>> 0).toString(36)}`;
 }

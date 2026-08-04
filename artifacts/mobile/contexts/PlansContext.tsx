@@ -1,12 +1,48 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { Plan } from '@/types';
+import { getPlanProfileName, Plan } from '@/types';
 import { getItem, setItem, STORAGE_KEYS } from '@/services/storage';
 
 const DEFAULT_PLANS: Plan[] = [
-  { id: 'plan_1h', name: '1 Hora', type: 'hours', duration: 1, price: 0.5, uploadSpeed: 5, downloadSpeed: 5 },
-  { id: 'plan_2h', name: '2 Horas', type: 'hours', duration: 2, price: 1.0, uploadSpeed: 5, downloadSpeed: 5 },
-  { id: 'plan_1d', name: '1 Día', type: 'days', duration: 1, price: 2.0, uploadSpeed: 5, downloadSpeed: 5 },
-  { id: 'plan_7d', name: '1 Semana', type: 'days', duration: 7, price: 10.0, uploadSpeed: 5, downloadSpeed: 5 },
+  {
+    id: 'plan_1h',
+    name: '1 Hora',
+    type: 'hours',
+    duration: 1,
+    price: 0.5,
+    uploadSpeed: 5,
+    downloadSpeed: 5,
+    mikrotikProfile: getPlanProfileName('plan_1h'),
+  },
+  {
+    id: 'plan_2h',
+    name: '2 Horas',
+    type: 'hours',
+    duration: 2,
+    price: 1.0,
+    uploadSpeed: 5,
+    downloadSpeed: 5,
+    mikrotikProfile: getPlanProfileName('plan_2h'),
+  },
+  {
+    id: 'plan_1d',
+    name: '1 Día',
+    type: 'days',
+    duration: 1,
+    price: 2.0,
+    uploadSpeed: 5,
+    downloadSpeed: 5,
+    mikrotikProfile: getPlanProfileName('plan_1d'),
+  },
+  {
+    id: 'plan_7d',
+    name: '1 Semana',
+    type: 'days',
+    duration: 7,
+    price: 10.0,
+    uploadSpeed: 5,
+    downloadSpeed: 5,
+    mikrotikProfile: getPlanProfileName('plan_7d'),
+  },
 ];
 
 function generateId(): string {
@@ -16,7 +52,7 @@ function generateId(): string {
 interface PlansContextType {
   plans: Plan[];
   isLoading: boolean;
-  addPlan: (plan: Omit<Plan, 'id'>) => Promise<void>;
+  addPlan: (plan: Omit<Plan, 'id'>) => Promise<Plan>;
   updatePlan: (id: string, plan: Partial<Omit<Plan, 'id'>>) => Promise<void>;
   deletePlan: (id: string) => Promise<void>;
 }
@@ -31,7 +67,12 @@ export function PlansProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       const stored = await getItem<Plan[]>(STORAGE_KEYS.PLANS);
       if (stored && stored.length > 0) {
-        setPlans(stored);
+        const normalized = stored.map((plan) => ({
+          ...plan,
+          mikrotikProfile: plan.mikrotikProfile || getPlanProfileName(plan.id),
+        }));
+        setPlans(normalized);
+        await setItem(STORAGE_KEYS.PLANS, normalized);
       } else {
         setPlans(DEFAULT_PLANS);
         await setItem(STORAGE_KEYS.PLANS, DEFAULT_PLANS);
@@ -45,12 +86,25 @@ export function PlansProvider({ children }: { children: React.ReactNode }) {
     await setItem(STORAGE_KEYS.PLANS, updated);
   }, []);
 
-  async function addPlan(plan: Omit<Plan, 'id'>): Promise<void> {
-    await save([...plans, { ...plan, id: generateId() }]);
+  async function addPlan(plan: Omit<Plan, 'id'>): Promise<Plan> {
+    const id = generateId();
+    const created: Plan = {
+      ...plan,
+      id,
+      mikrotikProfile: plan.mikrotikProfile || getPlanProfileName(id),
+    };
+    await save([...plans, created]);
+    return created;
   }
 
   async function updatePlan(id: string, partial: Partial<Omit<Plan, 'id'>>): Promise<void> {
-    await save(plans.map((p) => (p.id === id ? { ...p, ...partial } : p)));
+    await save(
+      plans.map((p) =>
+        p.id === id
+          ? { ...p, ...partial, mikrotikProfile: partial.mikrotikProfile || p.mikrotikProfile || getPlanProfileName(id) }
+          : p,
+      ),
+    );
   }
 
   async function deletePlan(id: string): Promise<void> {
