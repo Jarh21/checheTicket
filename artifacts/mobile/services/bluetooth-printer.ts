@@ -1,4 +1,5 @@
 import { PermissionsAndroid, Platform } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Ticket } from '@/types';
 
 export type BluetoothPrinter = {
@@ -23,12 +24,22 @@ interface BluetoothPrinterPackage {
   EscPos: EscPosApi;
 }
 
+function isExpoGo(): boolean {
+  return (
+    Constants.executionEnvironment === ExecutionEnvironment.StoreClient ||
+    Constants.appOwnership === 'expo'
+  );
+}
+
 function getBluetoothPackage(): BluetoothPrinterPackage | null {
-  if (Platform.OS !== 'android') return null;
+  // Expo Go does not include this custom native module. Avoid even attempting
+  // require() there because Expo logs the missing native module before the
+  // exception can be caught.
+  if (Platform.OS !== 'android' || isExpoGo()) return null;
 
   try {
-    // The native module is absent in Expo Go. Keep this lookup lazy so the
-    // rest of the app remains usable while testing the UI there.
+    // Keep this lookup lazy so the rest of the app remains usable in builds
+    // where the native module is not installed.
     return require('rn-bluetooth-classic-printer') as BluetoothPrinterPackage;
   } catch {
     return null;
@@ -36,7 +47,9 @@ function getBluetoothPackage(): BluetoothPrinterPackage | null {
 }
 
 export function isBluetoothPrinterAvailable(): boolean {
-  return getBluetoothPackage() !== null;
+  // This function is used while rendering Settings. Do not load a native
+  // module from render; on Expo Go this is always unavailable.
+  return Platform.OS === 'android' && !isExpoGo();
 }
 
 export async function getPairedBluetoothPrinters(): Promise<{
