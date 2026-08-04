@@ -14,8 +14,14 @@ import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { useConfig } from '@/contexts/ConfigContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePrinter } from '@/contexts/PrinterContext';
 import { MikroTikConfig } from '@/types';
 import { testConnection } from '@/services/mikrotik';
+import {
+  getPairedBluetoothPrinters,
+  isBluetoothPrinterAvailable,
+  BluetoothPrinter,
+} from '@/services/bluetooth-printer';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 
@@ -74,11 +80,14 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { config, saveConfig } = useConfig();
   const { logout, session } = useAuth();
+  const { selectedPrinter, saveSelectedPrinter, clearSelectedPrinter } = usePrinter();
 
   const [form, setForm] = useState<MikroTikConfig>(config);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [printers, setPrinters] = useState<BluetoothPrinter[]>([]);
+  const [loadingPrinters, setLoadingPrinters] = useState(false);
 
   useEffect(() => {
     setForm(config);
@@ -116,6 +125,26 @@ export default function SettingsScreen() {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setSaving(false);
     Alert.alert('Guardado', 'Configuración guardada correctamente');
+  }
+
+  async function handleFindPrinters() {
+    setLoadingPrinters(true);
+    const result = await getPairedBluetoothPrinters();
+    setLoadingPrinters(false);
+    if (!result.success) {
+      Alert.alert('Bluetooth', result.error || 'No se pudieron cargar las impresoras emparejadas.');
+      return;
+    }
+    setPrinters(result.printers);
+    if (result.printers.length === 0) {
+      Alert.alert('Sin impresoras', 'Empareja primero la impresora desde los ajustes Bluetooth del teléfono.');
+    }
+  }
+
+  async function handleSelectPrinter(printer: BluetoothPrinter) {
+    await saveSelectedPrinter(printer);
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Alert.alert('Impresora seleccionada', printer.name || printer.id);
   }
 
   const paddingTop = insets.top + (Platform.OS === 'web' ? 67 : 0);
@@ -248,6 +277,84 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {/* Bluetooth printer */}
+      {Platform.OS === 'android' && (
+        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.sectionHeader}>
+            <MaterialCommunityIcons name="bluetooth" size={20} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+              Impresora Bluetooth
+            </Text>
+          </View>
+          <Text style={[styles.printerHint, { color: colors.mutedForeground }]}>
+            Empareja la impresora en Android y selecciónala aquí para imprimir tickets térmicos directamente.
+          </Text>
+          {!isBluetoothPrinterAvailable() && (
+            <Text style={[styles.printerWarning, { color: colors.warning }]}>
+              La impresión directa estará disponible en el APK personalizado, no en Expo Go.
+            </Text>
+          )}
+          {selectedPrinter && (
+            <View style={[styles.selectedPrinter, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+              <MaterialCommunityIcons name="printer-check" size={20} color={colors.success} />
+              <View style={styles.selectedPrinterInfo}>
+                <Text style={[styles.selectedPrinterName, { color: colors.foreground }]}>
+                  {selectedPrinter.name || 'Impresora sin nombre'}
+                </Text>
+                <Text style={[styles.selectedPrinterId, { color: colors.mutedForeground }]}>
+                  {selectedPrinter.id}
+                </Text>
+              </View>
+              <Pressable onPress={clearSelectedPrinter} hitSlop={10}>
+                <Feather name="x-circle" size={19} color={colors.mutedForeground} />
+              </Pressable>
+            </View>
+          )}
+          <Pressable
+            onPress={handleFindPrinters}
+            disabled={loadingPrinters}
+            style={({ pressed }) => [
+              styles.printerScanBtn,
+              { backgroundColor: colors.secondary, borderColor: colors.border, opacity: pressed || loadingPrinters ? 0.7 : 1 },
+            ]}
+          >
+            {loadingPrinters ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Feather name="search" size={16} color={colors.primary} />
+            )}
+            <Text style={[styles.testBtnText, { color: colors.primary }]}>
+              {loadingPrinters ? 'Buscando...' : 'Buscar emparejadas'}
+            </Text>
+          </Pressable>
+          {printers.map((printer) => (
+            <Pressable
+              key={printer.id}
+              onPress={() => handleSelectPrinter(printer)}
+              style={({ pressed }) => [
+                styles.printerRow,
+                { borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
+              ]}
+            >
+              <MaterialCommunityIcons name="printer-outline" size={19} color={colors.primary} />
+              <View style={styles.selectedPrinterInfo}>
+                <Text style={[styles.selectedPrinterName, { color: colors.foreground }]}>
+                  {printer.name || 'Impresora sin nombre'}
+                </Text>
+                <Text style={[styles.selectedPrinterId, { color: colors.mutedForeground }]}>
+                  {printer.id}
+                </Text>
+              </View>
+              <Feather
+                name={selectedPrinter?.id === printer.id ? 'check-circle' : 'chevron-right'}
+                size={18}
+                color={selectedPrinter?.id === printer.id ? colors.success : colors.mutedForeground}
+              />
+            </Pressable>
+          ))}
+        </View>
+      )}
+
       {/* License status card */}
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.sectionHeader}>
@@ -358,6 +465,39 @@ const styles = StyleSheet.create({
   },
   saveBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   errorText: { fontSize: 13, fontFamily: 'Inter_400Regular', marginBottom: 4 },
+  printerHint: { fontSize: 13, lineHeight: 19, marginBottom: 10 },
+  printerWarning: { fontSize: 12, lineHeight: 17, marginBottom: 10 },
+  selectedPrinter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 10,
+  },
+  selectedPrinterInfo: { flex: 1, gap: 2 },
+  selectedPrinterName: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  selectedPrinterId: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  printerScanBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  printerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+  },
   licenseName: { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
   licenseEmail: { fontSize: 13, fontFamily: 'Inter_400Regular', marginTop: 3 },
   licenseMeta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 14, gap: 8 },

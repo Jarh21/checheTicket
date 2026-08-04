@@ -2,5 +2,6 @@
 - [MikroTik REST direct](mikrotik-rest.md) — App calls MikroTik REST API directly (no backend proxy); base64 auth via pure-JS encoder, not btoa (safer cross-RN compat).
 - [Expo build source](expo-build-source.md) — EAS monorepo builds must use the current workspace root and branch; Expo version in remote logs identifies stale or wrong source snapshots.
 - [Android tab icons](android-tab-icons.md) — Android/Expo Go uses the classic tabs with bundled MaterialCommunityIcons; avoid SF Symbols and NativeTabs for the current target.
+- [Bluetooth thermal printing](bluetooth-printer.md) — direct Android ticket printing uses Bluetooth Classic ESC/POS and requires a custom APK; Expo Go only previews the UI.
 - [Central license authority](license-platform.md) — mobile access depends on server-validated licenses, sessions, and device limits; local time must never decide expiry.
 - [Production publish requirements](production-publish.md) — multi-artifact publishing needs production admin secrets and every configured health path must return 200.

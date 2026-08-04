@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Modal,
   Pressable,
   ScrollView,
@@ -13,6 +14,8 @@ import * as Haptics from 'expo-haptics';
 import { useColors } from '@/hooks/useColors';
 import { Ticket } from '@/types';
 import { printTicket, shareTicket } from '@/services/printer';
+import { printTicketBluetooth } from '@/services/bluetooth-printer';
+import { usePrinter } from '@/contexts/PrinterContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
 
@@ -42,7 +45,9 @@ export function GeneratedTicketModal({
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [printing, setPrinting] = useState(false);
+  const [bluetoothPrinting, setBluetoothPrinting] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const { selectedPrinter } = usePrinter();
 
   if (!ticket) return null;
 
@@ -60,6 +65,24 @@ export function GeneratedTicketModal({
     setSharing(true);
     await shareTicket(ticket, wifiName);
     setSharing(false);
+  }
+
+  async function handleBluetoothPrint() {
+    if (!ticket || !selectedPrinter) {
+      Alert.alert('Sin impresora', 'Selecciona una impresora Bluetooth en Ajustes.');
+      return;
+    }
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setBluetoothPrinting(true);
+    const result = await printTicketBluetooth(ticket, wifiName, selectedPrinter);
+    setBluetoothPrinting(false);
+    if (result.success) {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Ticket impreso', `Enviado a ${selectedPrinter.name || selectedPrinter.id}.`);
+    } else {
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('No se pudo imprimir', result.error || 'Verifica la conexión Bluetooth.');
+    }
   }
 
   return (
@@ -151,6 +174,28 @@ export function GeneratedTicketModal({
 
             {/* Action buttons */}
             <View style={styles.actions}>
+              <Pressable
+                onPress={handleBluetoothPrint}
+                disabled={bluetoothPrinting}
+                style={({ pressed }) => [
+                  styles.actionBtn,
+                  {
+                    backgroundColor: colors.secondary,
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                    opacity: pressed || bluetoothPrinting ? 0.8 : 1,
+                  },
+                ]}
+              >
+                {bluetoothPrinting ? (
+                  <ActivityIndicator color={colors.primary} size="small" />
+                ) : (
+                  <MaterialCommunityIcons name="bluetooth" size={20} color={colors.primary} />
+                )}
+                <Text style={[styles.actionBtnText, { color: colors.primary }]}>
+                  {bluetoothPrinting ? 'Enviando...' : 'Bluetooth'}
+                </Text>
+              </Pressable>
               <Pressable
                 onPress={handlePrint}
                 disabled={printing}

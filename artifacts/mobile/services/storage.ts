@@ -6,6 +6,7 @@ export const STORAGE_KEYS = {
   MIKROTIK_CONFIG: '@hotspot/mikrotik_config',
   PLANS: '@hotspot/plans',
   TICKETS: '@hotspot/tickets',
+  BLUETOOTH_PRINTER: '@hotspot/bluetooth_printer',
 };
 
 export async function getItem<T>(key: string): Promise<T | null> {

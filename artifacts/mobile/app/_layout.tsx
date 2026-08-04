@@ -19,6 +19,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ConfigProvider } from '@/contexts/ConfigContext';
 import { PlansProvider } from '@/contexts/PlansContext';
 import { TicketsProvider } from '@/contexts/TicketsContext';
+import { PrinterProvider } from '@/contexts/PrinterContext';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -62,7 +63,9 @@ export default function RootLayout() {
                 <ConfigProvider>
                   <PlansProvider>
                     <TicketsProvider>
-                      <RootLayoutNav />
+                      <PrinterProvider>
+                        <RootLayoutNav />
+                      </PrinterProvider>
                     </TicketsProvider>
                   </PlansProvider>
                 </ConfigProvider>

@@ -19,7 +19,14 @@
     },
     "android": {
       "softwareKeyboardLayoutMode": "pan",
-      "package": "com.tuticketwifi.app"
+      "package": "com.tuticketwifi.app",
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
