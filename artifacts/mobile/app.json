@@ -7,7 +7,7 @@
     "icon": "./assets/images/passnet-icon.png",
     "scheme": "tuticketwifi",
     "userInterfaceStyle": "dark",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/images/passnet-splash.png",
       "resizeMode": "contain",
@@ -46,8 +46,7 @@
       "expo-web-browser"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "eas": {
