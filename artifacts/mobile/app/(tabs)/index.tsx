@@ -77,6 +77,19 @@ export default function DashboardScreen() {
       return;
     }
 
+    // Validate plan has been synced to MikroTik
+    if (plan.synced === false) {
+      Alert.alert(
+        'Plan no sincronizado',
+        'Este plan aún no ha sido creado en el router MikroTik. Ve a Planes y sincronízalo primero.',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Ir a Planes', onPress: () => router.navigate('/(tabs)/plans') },
+        ],
+      );
+      return;
+    }
+
     if (connStatus && !connStatus.success) {
       Alert.alert(
         'Router desconectado',

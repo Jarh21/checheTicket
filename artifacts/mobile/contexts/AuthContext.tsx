@@ -12,6 +12,7 @@ interface AuthContextType {
   session: LicenseSession | null;
   login: (email: string, password: string) => Promise<{ ok: boolean; message?: string }>;
   logout: () => Promise<void>;
+  biometricLogin: () => Promise<{ ok: boolean; message?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -64,6 +65,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function biometricLogin() {
+    try {
+      const restored = await restoreLicenseSession();
+      if (restored) {
+        setSession(restored);
+        return { ok: true };
+      }
+      return { ok: false, message: 'La sesión ha vencido. Inicia sesión con tu correo y contraseña.' };
+    } catch (error) {
+      return { ok: false, message: errorMessage(error) };
+    }
+  }
+
   async function logout() {
     await logoutLicenseSession();
     setSession(null);
@@ -77,6 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         session,
         login,
         logout,
+        biometricLogin,
       }}
     >
       {children}

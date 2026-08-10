@@ -3,13 +3,16 @@ import {
   createLicenseController,
   createAdminUserController,
   getAdminDashboardController,
+  getEmailConfigController,
   listLicenseDevicesController,
   listDeviceAuthEventsController,
   listAdminUsersController,
   listLicensesController,
+  listPasswordChangeLogsController,
   loginAdminController,
   logoutAdminController,
   renewLicenseController,
+  saveEmailConfigController,
   updateLicenseController,
 } from "../controllers/admin-controller";
 import { requireSession } from "../middlewares/auth";
@@ -40,5 +43,12 @@ router.get(
 router.get("/admin/device-auth-events", requireAdmin, listDeviceAuthEventsController);
 router.get("/admin/users", requireAdmin, listAdminUsersController);
 router.post("/admin/users", requireAdmin, createAdminUserController);
+
+// Email config
+router.get("/admin/email-config", requireAdmin, getEmailConfigController);
+router.put("/admin/email-config", requireAdmin, saveEmailConfigController);
+
+// Audit logs
+router.get("/admin/password-change-logs", requireAdmin, listPasswordChangeLogsController);
 
 export default router;

@@ -7,6 +7,8 @@ export interface Plan {
   uploadSpeed: number; // Mbps
   downloadSpeed: number; // Mbps
   mikrotikProfile?: string;
+  /** True after the profile has been created on MikroTik. False = needs sync. */
+  synced?: boolean;
 }
 
 export interface Ticket {

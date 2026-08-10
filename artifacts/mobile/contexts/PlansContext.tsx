@@ -12,6 +12,7 @@ const DEFAULT_PLANS: Plan[] = [
     uploadSpeed: 5,
     downloadSpeed: 5,
     mikrotikProfile: getPlanProfileName('plan_1h'),
+    synced: false,
   },
   {
     id: 'plan_2h',
@@ -22,6 +23,7 @@ const DEFAULT_PLANS: Plan[] = [
     uploadSpeed: 5,
     downloadSpeed: 5,
     mikrotikProfile: getPlanProfileName('plan_2h'),
+    synced: false,
   },
   {
     id: 'plan_1d',
@@ -32,6 +34,7 @@ const DEFAULT_PLANS: Plan[] = [
     uploadSpeed: 5,
     downloadSpeed: 5,
     mikrotikProfile: getPlanProfileName('plan_1d'),
+    synced: false,
   },
   {
     id: 'plan_7d',
@@ -42,6 +45,7 @@ const DEFAULT_PLANS: Plan[] = [
     uploadSpeed: 5,
     downloadSpeed: 5,
     mikrotikProfile: getPlanProfileName('plan_7d'),
+    synced: false,
   },
 ];
 
@@ -70,6 +74,8 @@ export function PlansProvider({ children }: { children: React.ReactNode }) {
         const normalized = stored.map((plan) => ({
           ...plan,
           mikrotikProfile: plan.mikrotikProfile || getPlanProfileName(plan.id),
+          // Backward compat: plans stored before synced field was added are treated as synced
+          synced: plan.synced ?? true,
         }));
         setPlans(normalized);
         await setItem(STORAGE_KEYS.PLANS, normalized);
@@ -87,11 +93,12 @@ export function PlansProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function addPlan(plan: Omit<Plan, 'id'>): Promise<Plan> {
-    const id = generateId();
+    const newId = generateId();
     const created: Plan = {
       ...plan,
-      id,
-      mikrotikProfile: plan.mikrotikProfile || getPlanProfileName(id),
+      id: newId,
+      mikrotikProfile: plan.mikrotikProfile || getPlanProfileName(newId),
+      synced: false,
     };
     await save([...plans, created]);
     return created;

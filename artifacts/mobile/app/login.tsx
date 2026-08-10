@@ -12,21 +12,25 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { getItem, setItem, STORAGE_KEYS } from '@/services/storage';
 
 export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { isAuthenticated, isLoading, login } = useAuth();
+  const { isAuthenticated, isLoading, login, biometricLogin } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [biometricReady, setBiometricReady] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -34,6 +38,21 @@ export default function LoginScreen() {
       router.replace('/(tabs)');
     }
   }, [isAuthenticated, isLoading]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const hardware = await LocalAuthentication.hasHardwareAsync();
+        const enrolled = await LocalAuthentication.isEnrolledAsync();
+        if (hardware && enrolled) {
+          const enabled = await getItem<boolean>(STORAGE_KEYS.BIOMETRIC_ENABLED);
+          setBiometricReady(!!enabled);
+        }
+      } catch {
+        setBiometricReady(false);
+      }
+    })();
+  }, []);
 
   if (isLoading) {
     return (
@@ -65,6 +84,61 @@ export default function LoginScreen() {
     }
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setSubmitting(false);
+
+    // Offer biometric after first successful login
+    try {
+      const hardware = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      const alreadyEnabled = await getItem<boolean>(STORAGE_KEYS.BIOMETRIC_ENABLED);
+      if (hardware && enrolled && !alreadyEnabled) {
+        Alert.alert(
+          'Inicio rápido con huella',
+          '¿Deseas habilitar el inicio de sesión con huella digital?',
+          [
+            { text: 'Ahora no', style: 'cancel' },
+            {
+              text: 'Habilitar',
+              onPress: async () => {
+                await setItem(STORAGE_KEYS.BIOMETRIC_ENABLED, true);
+                setBiometricReady(true);
+              },
+            },
+          ],
+        );
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  async function handleBiometricLogin() {
+    setBiometricLoading(true);
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Confirma tu identidad',
+        fallbackLabel: 'Usar contraseña',
+        cancelLabel: 'Cancelar',
+        disableDeviceFallback: false,
+      });
+      if (!result.success) {
+        setBiometricLoading(false);
+        return;
+      }
+      const loginResult = await biometricLogin();
+      if (!loginResult.ok) {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        setError(loginResult.message ?? 'Sesión expirada');
+        // Disable biometric so user can re-enable after next login
+        await setItem(STORAGE_KEYS.BIOMETRIC_ENABLED, false);
+        setBiometricReady(false);
+      } else {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch {
+      setError('No se pudo autenticar con huella');
+    } finally {
+      setBiometricLoading(false);
+    }
   }
 
   return (
@@ -167,6 +241,36 @@ export default function LoginScreen() {
               </Text>
             )}
           </Pressable>
+
+          {/* Bottom row: biometric + forgot password */}
+          <View style={styles.bottomRow}>
+            {biometricReady && (
+              <Pressable
+                onPress={handleBiometricLogin}
+                disabled={biometricLoading}
+                style={({ pressed }) => [
+                  styles.biometricBtn,
+                  { borderColor: colors.border, opacity: pressed || biometricLoading ? 0.7 : 1 },
+                ]}
+              >
+                {biometricLoading ? (
+                  <ActivityIndicator color={colors.primary} size="small" />
+                ) : (
+                  <MaterialCommunityIcons name="fingerprint" size={26} color={colors.primary} />
+                )}
+              </Pressable>
+            )}
+
+            <Pressable
+              onPress={() => router.push('/forgot-password')}
+              hitSlop={10}
+              style={[styles.forgotBtn, !biometricReady && styles.forgotBtnFull]}
+            >
+              <Text style={[styles.forgotText, { color: colors.primary }]}>
+                ¿Olvidaste tu contraseña?
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -254,5 +358,30 @@ const styles = StyleSheet.create({
   submitText: {
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
+  },
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: -4,
+  },
+  biometricBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  forgotBtn: {
+    paddingVertical: 8,
+  },
+  forgotBtnFull: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  forgotText: {
+    fontSize: 14,
+    fontFamily: 'Inter_500Medium',
   },
 });

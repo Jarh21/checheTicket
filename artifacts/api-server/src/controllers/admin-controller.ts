@@ -25,11 +25,14 @@ import {
   createAdminUser,
   ensureAdminUser,
   getDashboard,
+  getEmailConfig,
   listDevices,
   listAdminUsers,
   listDeviceAuthEvents,
+  listPasswordChangeLogs,
   listPublicLicenses,
   renewLicense,
+  saveEmailConfig,
   updateLicense,
 } from "../services/license-service";
 import {
@@ -169,4 +172,48 @@ export async function createAdminUserController(
 
 export async function ensureAdminController(): Promise<void> {
   await ensureAdminUser();
+}
+
+// ─── Email Config ────────────────────────────────────────────────────────────
+
+export async function getEmailConfigController(
+  _request: Request,
+  response: Response,
+): Promise<void> {
+  const config = await getEmailConfig();
+  response.json({
+    gmailUser: config?.gmailUser ?? null,
+    hasConfig: !!config,
+  });
+}
+
+export async function saveEmailConfigController(
+  request: Request,
+  response: Response,
+): Promise<void> {
+  const { gmailUser, gmailAppPassword } = (request.body ?? {}) as {
+    gmailUser?: string;
+    gmailAppPassword?: string;
+  };
+  if (!gmailUser?.trim() || !gmailAppPassword?.trim()) {
+    response.status(400).json({
+      error: "Correo y contraseña de aplicación son requeridos",
+    });
+    return;
+  }
+  await saveEmailConfig({
+    gmailUser: gmailUser.trim(),
+    gmailAppPassword: gmailAppPassword.trim(),
+  });
+  response.json({ success: true });
+}
+
+// ─── Password Change Logs ─────────────────────────────────────────────────────
+
+export async function listPasswordChangeLogsController(
+  _request: Request,
+  response: Response,
+): Promise<void> {
+  const logs = await listPasswordChangeLogs();
+  response.json(logs);
 }

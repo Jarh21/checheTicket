@@ -96,7 +96,7 @@ export function GeneratedTicketModal({
         <View
           style={[
             styles.sheet,
-            { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
+            { backgroundColor: colors.card, paddingBottom: insets.bottom + 12 },
           ]}
         >
           {/* Handle */}
@@ -121,13 +121,12 @@ export function GeneratedTicketModal({
             </Pressable>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Receipt card */}
+          {/* Scrollable receipt */}
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
             <View style={[styles.receipt, { backgroundColor: '#FFFFFF' }]}>
               <Text style={styles.receiptHeader}>INTERNET HOTSPOT</Text>
               <View style={styles.receiptDivider} />
 
-              {/* Credentials - big & readable */}
               <View style={styles.credBlock}>
                 <Text style={styles.credLabel}>USUARIO</Text>
                 <Text style={styles.credValue}>{ticket.username}</Text>
@@ -171,72 +170,69 @@ export function GeneratedTicketModal({
               <View style={styles.receiptDivider} />
               <Text style={styles.receiptFooter}>Gracias por su preferencia</Text>
             </View>
-
-            {/* Action buttons */}
-            <View style={styles.actions}>
-              <Pressable
-                onPress={handleBluetoothPrint}
-                disabled={bluetoothPrinting}
-                style={({ pressed }) => [
-                  styles.actionBtn,
-                  {
-                    backgroundColor: colors.secondary,
-                    borderColor: colors.border,
-                    borderWidth: 1,
-                    opacity: pressed || bluetoothPrinting ? 0.8 : 1,
-                  },
-                ]}
-              >
-                {bluetoothPrinting ? (
-                  <ActivityIndicator color={colors.primary} size="small" />
-                ) : (
-                  <MaterialCommunityIcons name="bluetooth" size={20} color={colors.primary} />
-                )}
-                <Text style={[styles.actionBtnText, { color: colors.primary }]}>
-                  {bluetoothPrinting ? 'Enviando...' : 'Bluetooth'}
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={handlePrint}
-                disabled={printing}
-                style={({ pressed }) => [
-                  styles.actionBtn,
-                  { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
-                ]}
-              >
-                {printing ? (
-                  <ActivityIndicator color={colors.primaryForeground} size="small" />
-                ) : (
-                  <MaterialCommunityIcons name="printer" size={20} color={colors.primaryForeground} />
-                )}
-                <Text style={[styles.actionBtnText, { color: colors.primaryForeground }]}>
-                  {printing ? 'Imprimiendo...' : 'Imprimir'}
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={handleShare}
-                disabled={sharing}
-                style={({ pressed }) => [
-                  styles.actionBtn,
-                  {
-                    backgroundColor: colors.secondary,
-                    opacity: pressed ? 0.8 : 1,
-                    flex: 0.6,
-                  },
-                ]}
-              >
-                {sharing ? (
-                  <ActivityIndicator color={colors.foreground} size="small" />
-                ) : (
-                  <Feather name="share-2" size={18} color={colors.foreground} />
-                )}
-                <Text style={[styles.actionBtnText, { color: colors.foreground }]}>
-                  {sharing ? 'Compartiendo...' : 'Compartir'}
-                </Text>
-              </Pressable>
-            </View>
           </ScrollView>
+
+          {/* ─── Action buttons OUTSIDE the scroll ─── */}
+          <View style={styles.actions}>
+            {/* Bluetooth */}
+            <Pressable
+              onPress={handleBluetoothPrint}
+              disabled={bluetoothPrinting}
+              style={({ pressed }) => [
+                styles.actionBtn,
+                {
+                  backgroundColor: colors.secondary,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  opacity: pressed || bluetoothPrinting ? 0.7 : 1,
+                },
+              ]}
+            >
+              {bluetoothPrinting ? (
+                <ActivityIndicator color={colors.primary} size="small" />
+              ) : (
+                <MaterialCommunityIcons name="bluetooth" size={26} color={colors.primary} />
+              )}
+            </Pressable>
+
+            {/* Imprimir (sistema) */}
+            <Pressable
+              onPress={handlePrint}
+              disabled={printing}
+              style={({ pressed }) => [
+                styles.actionBtn,
+                styles.actionBtnPrimary,
+                { backgroundColor: colors.primary, opacity: pressed || printing ? 0.7 : 1 },
+              ]}
+            >
+              {printing ? (
+                <ActivityIndicator color={colors.primaryForeground} size="small" />
+              ) : (
+                <MaterialCommunityIcons name="printer" size={26} color={colors.primaryForeground} />
+              )}
+            </Pressable>
+
+            {/* Compartir */}
+            <Pressable
+              onPress={handleShare}
+              disabled={sharing}
+              style={({ pressed }) => [
+                styles.actionBtn,
+                {
+                  backgroundColor: colors.secondary,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  opacity: pressed || sharing ? 0.7 : 1,
+                },
+              ]}
+            >
+              {sharing ? (
+                <ActivityIndicator color={colors.foreground} size="small" />
+              ) : (
+                <Feather name="share-2" size={22} color={colors.foreground} />
+              )}
+            </Pressable>
+          </View>
         </View>
       </View>
     </Modal>
@@ -266,7 +262,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   headerTitle: {
     fontSize: 20,
@@ -280,10 +276,13 @@ const styles = StyleSheet.create({
   closeBtn: {
     padding: 4,
   },
+  scroll: {
+    flexGrow: 0,
+  },
   receipt: {
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 4,
   },
   receiptHeader: {
     textAlign: 'center',
@@ -343,22 +342,23 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     marginTop: 4,
   },
+  // ─── Action bar ───────────────────────────────────────────────────────────
   actions: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 8,
+    justifyContent: 'center',
+    gap: 16,
+    paddingTop: 14,
   },
   actionBtn: {
-    flex: 1,
-    flexDirection: 'row',
+    width: 60,
+    height: 60,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 14,
-    gap: 8,
   },
-  actionBtnText: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
+  actionBtnPrimary: {
+    width: 68,
+    height: 68,
+    borderRadius: 20,
   },
 });

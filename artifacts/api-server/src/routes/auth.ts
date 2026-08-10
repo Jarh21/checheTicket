@@ -1,8 +1,10 @@
 import { Router, type IRouter } from "express";
 import {
+  forgotPasswordController,
   getLicenseSessionController,
   loginLicenseController,
   logoutLicenseController,
+  resetPasswordController,
 } from "../controllers/auth-controller";
 import { requireSession } from "../middlewares/auth";
 
@@ -19,5 +21,9 @@ router.post(
   requireSession("license"),
   logoutLicenseController,
 );
+
+// Password reset (no auth required)
+router.post("/auth/forgot-password", forgotPasswordController);
+router.post("/auth/reset-password", resetPasswordController);
 
 export default router;

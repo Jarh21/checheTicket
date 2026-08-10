@@ -1,15 +1,20 @@
-import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, ne, sql } from "drizzle-orm";
 import {
   adminUsersTable,
   accountsTable,
   db,
   deviceAuthEventsTable,
   devicesTable,
+  emailConfigTable,
   licensesTable,
+  passwordChangeLogsTable,
+  passwordResetTokensTable,
 } from "@workspace/db";
 import { AppError } from "../lib/errors";
 import {
+  createSessionToken,
   hashPassword,
+  hashSessionToken,
   normalizeEmail,
   verifyPassword,
 } from "../lib/security";
@@ -642,4 +647,134 @@ export async function ensureAdminUser() {
       passwordHash: await hashPassword(password),
     });
   }
+}
+
+// ─── Email Config ─────────────────────────────────────────────────────────────
+
+export async function getEmailConfig(): Promise<{
+  gmailUser: string;
+} | null> {
+  const [row] = await db
+    .select({ gmailUser: emailConfigTable.gmailUser })
+    .from(emailConfigTable)
+    .limit(1);
+  return row ?? null;
+}
+
+export async function getEmailConfigFull(): Promise<{
+  gmailUser: string;
+  gmailAppPassword: string;
+} | null> {
+  const [row] = await db.select().from(emailConfigTable).limit(1);
+  return row ?? null;
+}
+
+export async function saveEmailConfig(input: {
+  gmailUser: string;
+  gmailAppPassword: string;
+}): Promise<void> {
+  await db
+    .insert(emailConfigTable)
+    .values({
+      id: "singleton",
+      gmailUser: input.gmailUser,
+      gmailAppPassword: input.gmailAppPassword,
+    })
+    .onConflictDoUpdate({
+      target: emailConfigTable.id,
+      set: {
+        gmailUser: input.gmailUser,
+        gmailAppPassword: input.gmailAppPassword,
+      },
+    });
+}
+
+// ─── Password Reset ───────────────────────────────────────────────────────────
+
+export async function createPasswordResetToken(
+  email: string,
+): Promise<string | null> {
+  const [account] = await db
+    .select({ id: accountsTable.id })
+    .from(accountsTable)
+    .where(eq(accountsTable.email, normalizeEmail(email)))
+    .limit(1);
+  if (!account) return null;
+
+  const rawToken = createSessionToken(); // 32-byte hex
+  const tokenHash = hashSessionToken(rawToken);
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await db.insert(passwordResetTokensTable).values({
+    accountId: account.id,
+    tokenHash,
+    expiresAt,
+  });
+
+  return rawToken;
+}
+
+export async function confirmPasswordReset(input: {
+  token: string;
+  password: string;
+  deviceId?: string;
+  deviceName?: string;
+  ipAddress?: string;
+}): Promise<void> {
+  const tokenHash = hashSessionToken(input.token);
+
+  const [resetToken] = await db
+    .select()
+    .from(passwordResetTokensTable)
+    .where(
+      and(
+        eq(passwordResetTokensTable.tokenHash, tokenHash),
+        gt(passwordResetTokensTable.expiresAt, new Date()),
+        isNull(passwordResetTokensTable.usedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!resetToken) {
+    throw new AppError(400, "El enlace no es válido o ya fue utilizado");
+  }
+
+  const [account] = await db
+    .select({ id: accountsTable.id, email: accountsTable.email })
+    .from(accountsTable)
+    .where(eq(accountsTable.id, resetToken.accountId))
+    .limit(1);
+  if (!account) throw new AppError(404, "Cuenta no encontrada");
+
+  const newPasswordHash = await hashPassword(input.password);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(accountsTable)
+      .set({ passwordHash: newPasswordHash })
+      .where(eq(accountsTable.id, account.id));
+
+    await tx
+      .update(passwordResetTokensTable)
+      .set({ usedAt: new Date() })
+      .where(eq(passwordResetTokensTable.id, resetToken.id));
+
+    await tx.insert(passwordChangeLogsTable).values({
+      accountId: account.id,
+      email: account.email,
+      deviceId: input.deviceId ?? null,
+      deviceName: input.deviceName ?? null,
+      ipAddress: input.ipAddress ?? null,
+    });
+  });
+}
+
+// ─── Password Change Logs ─────────────────────────────────────────────────────
+
+export async function listPasswordChangeLogs() {
+  return db
+    .select()
+    .from(passwordChangeLogsTable)
+    .orderBy(desc(passwordChangeLogsTable.createdAt))
+    .limit(100);
 }

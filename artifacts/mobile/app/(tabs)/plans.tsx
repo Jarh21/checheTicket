@@ -274,6 +274,7 @@ export default function PlansScreen() {
       if (!result.success) {
         Alert.alert('Plan guardado, router no sincronizado', result.error);
       } else {
+        await updatePlan(savedPlan.id, { synced: true });
         Alert.alert('Plan sincronizado', `Perfil ${savedPlan.mikrotikProfile} listo en MikroTik.`);
       }
     } else {
@@ -305,6 +306,12 @@ export default function PlansScreen() {
     setSyncing(true);
     const results = await Promise.all(plans.map((plan) => ensurePlanProfile(plan)));
     setSyncing(false);
+    // Mark successfully synced plans
+    await Promise.all(
+      plans.map((plan, i) =>
+        results[i].success ? updatePlan(plan.id, { synced: true }) : Promise.resolve(),
+      ),
+    );
     const failed = results.filter((result) => !result.success);
     if (failed.length > 0) {
       Alert.alert('Sincronización incompleta', failed[0].error);

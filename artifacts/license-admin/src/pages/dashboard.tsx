@@ -35,6 +35,8 @@ import { TableSkeleton } from '@/components/table-skeleton';
 import { clearAdminToken } from '@/lib/auth';
 import { DeviceAuthActivity } from '@/components/device-auth-activity';
 import { AdminUsersList } from '@/components/admin-users-list';
+import { EmailConfigSection } from '@/components/email-config-section';
+import { PasswordChangeLogs } from '@/components/password-change-logs';
 import {
   Activity,
   AlertCircle,
@@ -307,6 +309,12 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <DeviceAuthActivity />
           <AdminUsersList />
+        </div>
+
+        {/* Email Config + Password Change Logs */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <EmailConfigSection />
+          <PasswordChangeLogs />
         </div>
       </main>
 

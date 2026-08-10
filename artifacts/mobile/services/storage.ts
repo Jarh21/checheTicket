@@ -7,6 +7,7 @@ export const STORAGE_KEYS = {
   PLANS: '@hotspot/plans',
   TICKETS: '@hotspot/tickets',
   BLUETOOTH_PRINTER: '@hotspot/bluetooth_printer',
+  BIOMETRIC_ENABLED: '@hotspot/biometric_enabled',
 };
 
 export async function getItem<T>(key: string): Promise<T | null> {
