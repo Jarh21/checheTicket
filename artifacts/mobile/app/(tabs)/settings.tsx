@@ -11,12 +11,20 @@ import {
 } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColors } from '@/hooks/useColors';
 import { useConfig } from '@/contexts/ConfigContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePrinter } from '@/contexts/PrinterContext';
 import { MikroTikConfig } from '@/types';
-import { testConnection } from '@/services/mikrotik';
+import { testConnection, uploadHotspotPortal } from '@/services/mikrotik';
+import {
+  PortalConfig,
+  PRESET_COLORS,
+  DEFAULT_PORTAL_CONFIG,
+  generateHotspotHTML,
+} from '@/services/hotspot-portal';
+import { STORAGE_KEYS } from '@/services/storage';
 import {
   getPairedBluetoothPrinters,
   isBluetoothPrinterAvailable,
@@ -89,9 +97,25 @@ export default function SettingsScreen() {
   const [printers, setPrinters] = useState<BluetoothPrinter[]>([]);
   const [loadingPrinters, setLoadingPrinters] = useState(false);
 
+  // Portal customization state
+  const [portal, setPortal] = useState<PortalConfig>(DEFAULT_PORTAL_CONFIG);
+  const [uploadingPortal, setUploadingPortal] = useState(false);
+
   useEffect(() => {
     setForm(config);
   }, [config]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEYS.PORTAL_CONFIG).then((raw) => {
+      if (raw) {
+        try {
+          setPortal(JSON.parse(raw) as PortalConfig);
+        } catch {
+          // ignore
+        }
+      }
+    });
+  }, []);
 
   function updateField(key: keyof MikroTikConfig, value: string) {
     setForm((f) => ({ ...f, [key]: value }));
@@ -125,6 +149,32 @@ export default function SettingsScreen() {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setSaving(false);
     Alert.alert('Guardado', 'Configuración guardada correctamente');
+  }
+
+  async function handleUploadPortal() {
+    if (!portal.businessName.trim()) {
+      Alert.alert('Campo requerido', 'Escribe el nombre de tu negocio');
+      return;
+    }
+    if (!config.ip.trim()) {
+      Alert.alert('Sin conexión', 'Guarda primero la configuración del router MikroTik');
+      return;
+    }
+    setUploadingPortal(true);
+    await AsyncStorage.setItem(STORAGE_KEYS.PORTAL_CONFIG, JSON.stringify(portal));
+    const html = generateHotspotHTML(portal);
+    const result = await uploadHotspotPortal(config, html);
+    await Haptics.notificationAsync(
+      result.success
+        ? Haptics.NotificationFeedbackType.Success
+        : Haptics.NotificationFeedbackType.Error,
+    );
+    setUploadingPortal(false);
+    if (result.success) {
+      Alert.alert('Portal actualizado', 'La pagina de login del hotspot fue reemplazada en el router.');
+    } else {
+      Alert.alert('Error al subir', result.error || 'No se pudo actualizar el portal.');
+    }
   }
 
   async function handleFindPrinters() {
@@ -355,6 +405,97 @@ export default function SettingsScreen() {
         </View>
       )}
 
+      {/* Hotspot portal customization */}
+      <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={styles.sectionHeader}>
+          <MaterialCommunityIcons name="web" size={20} color={colors.primary} />
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+            Personalizar Portal
+          </Text>
+        </View>
+        <Text style={[styles.printerHint, { color: colors.mutedForeground }]}>
+          Reemplaza la pagina de login del hotspot con tu nombre de negocio y color. Se sube directamente al router.
+        </Text>
+
+        {/* Business name input */}
+        <SettingInput
+          label="Nombre del negocio"
+          value={portal.businessName}
+          onChangeText={(t) => setPortal((p) => ({ ...p, businessName: t }))}
+          placeholder="Mi WiFi / Cafe Internet / Hostal..."
+          autoCapitalize="sentences"
+        />
+
+        {/* Color palette */}
+        <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginBottom: 10 }]}>
+          Color principal
+        </Text>
+        <View style={styles.colorRow}>
+          {PRESET_COLORS.map((c) => (
+            <Pressable
+              key={c.value}
+              onPress={() => setPortal((p) => ({ ...p, primaryColor: c.value }))}
+              style={[
+                styles.colorSwatch,
+                { backgroundColor: c.value },
+                portal.primaryColor === c.value && styles.colorSwatchSelected,
+              ]}
+            >
+              {portal.primaryColor === c.value && (
+                <Feather name="check" size={14} color="#fff" />
+              )}
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Mini preview */}
+        {portal.businessName.trim() !== '' && (
+          <View
+            style={[
+              styles.portalPreview,
+              { borderColor: colors.border, backgroundColor: colors.background },
+            ]}
+          >
+            <View style={[styles.portalPreviewBar, { backgroundColor: portal.primaryColor }]} />
+            <Text
+              style={[styles.portalPreviewName, { color: portal.primaryColor }]}
+              numberOfLines={1}
+            >
+              {portal.businessName}
+            </Text>
+            <Text style={[styles.portalPreviewSub, { color: colors.mutedForeground }]}>
+              Ingresa tus datos para conectarte
+            </Text>
+            <View style={[styles.portalPreviewInput, { borderColor: colors.border }]} />
+            <View style={[styles.portalPreviewInput, { borderColor: colors.border }]} />
+            <View style={[styles.portalPreviewBtn, { backgroundColor: portal.primaryColor }]} />
+          </View>
+        )}
+
+        {/* Upload button */}
+        <Pressable
+          onPress={handleUploadPortal}
+          disabled={uploadingPortal}
+          style={({ pressed }) => [
+            styles.saveBtn,
+            {
+              backgroundColor: colors.primary,
+              opacity: pressed || uploadingPortal ? 0.8 : 1,
+              marginTop: 14,
+            },
+          ]}
+        >
+          {uploadingPortal ? (
+            <ActivityIndicator size="small" color={colors.primaryForeground} />
+          ) : (
+            <MaterialCommunityIcons name="upload" size={17} color={colors.primaryForeground} />
+          )}
+          <Text style={[styles.saveBtnText, { color: colors.primaryForeground }]}>
+            {uploadingPortal ? 'Subiendo al router...' : 'Aplicar al router'}
+          </Text>
+        </Pressable>
+      </View>
+
       {/* License status card */}
       <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.sectionHeader}>
@@ -519,5 +660,67 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     marginTop: 4,
     marginBottom: 8,
+  },
+  colorRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+    flexWrap: 'wrap',
+  },
+  colorSwatch: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colorSwatchSelected: {
+    borderWidth: 3,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  portalPreview: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 4,
+    alignItems: 'center',
+    gap: 6,
+    overflow: 'hidden',
+  },
+  portalPreviewBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  portalPreviewName: {
+    fontSize: 16,
+    fontFamily: 'Inter_700Bold',
+    marginTop: 8,
+  },
+  portalPreviewSub: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    marginBottom: 6,
+  },
+  portalPreviewInput: {
+    width: '100%',
+    height: 28,
+    borderRadius: 7,
+    borderWidth: 1,
+  },
+  portalPreviewBtn: {
+    width: '100%',
+    height: 28,
+    borderRadius: 7,
+    marginTop: 2,
   },
 });

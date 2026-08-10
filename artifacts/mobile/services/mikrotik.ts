@@ -345,6 +345,110 @@ export function generateTicketPassword(): string {
   return result;
 }
 
+// ─── Hotspot portal upload ────────────────────────────────────────────────────
+
+export interface UploadPortalResult {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Uploads a custom HTML login page to the MikroTik router.
+ * Searches for "flash/hotspot/login.html" (or "hotspot/login.html") in the
+ * router file list and PATCHes its contents; creates it if absent.
+ *
+ * RouterOS REST requires file contents sent as base64.
+ * The HTML must be ASCII-safe before calling this function.
+ */
+export async function uploadHotspotPortal(
+  config: MikroTikConfig,
+  html: string,
+): Promise<UploadPortalResult> {
+  const base64Content = toBase64(html);
+  const candidateNames = ['flash/hotspot/login.html', 'hotspot/login.html'];
+
+  try {
+    // 1. List all files to find the existing login template
+    const listRes = await fetchWithTimeout(
+      `${getBaseUrl(config)}/file`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: getAuthHeader(config),
+          'Content-Type': 'application/json',
+        },
+      },
+      8000,
+    );
+
+    if (!listRes.ok) {
+      return {
+        success: false,
+        error: `No se pudo listar archivos del router (${listRes.status})`,
+      };
+    }
+
+    const files = (await listRes.json()) as Array<{ '.id': string; name: string }>;
+    const existing = files.find((f) => candidateNames.includes(f.name));
+
+    if (existing) {
+      // 2a. Update the existing file
+      const patchRes = await fetchWithTimeout(
+        `${getBaseUrl(config)}/file/${encodeURIComponent(existing['.id'])}`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: getAuthHeader(config),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ contents: base64Content }),
+        },
+        12000,
+      );
+
+      if (patchRes.ok) return { success: true };
+      return {
+        success: false,
+        error: `Error al actualizar el archivo (${patchRes.status})`,
+      };
+    }
+
+    // 2b. Create the file for the first time
+    const putRes = await fetchWithTimeout(
+      `${getBaseUrl(config)}/file`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: getAuthHeader(config),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: 'flash/hotspot/login.html',
+          contents: base64Content,
+        }),
+      },
+      12000,
+    );
+
+    if (putRes.ok) return { success: true };
+    return {
+      success: false,
+      error: `Error al crear el archivo en el router (${putRes.status}). Verifica que el directorio flash/hotspot exista.`,
+    };
+  } catch (error: unknown) {
+    const e = error as Error;
+    return {
+      success: false,
+      error:
+        e.name === 'AbortError'
+          ? 'Tiempo de conexión agotado'
+          : e.message || 'Error al conectar con el router',
+    };
+  }
+}
+
+// ─── Duration / rate helpers ──────────────────────────────────────────────────
+
 export function makeDurationLabel(type: 'hours' | 'days', duration: number): string {
   if (type === 'hours') {
     return duration === 1 ? '1 Hora' : `${duration} Horas`;
