@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -12,6 +13,8 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+
+const PASSNET_LOGO = require('@/assets/images/passnet-logo.jpeg');
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/contexts/AuthContext';
@@ -157,13 +160,11 @@ export default function LoginScreen() {
       >
         {/* Logo */}
         <View style={styles.logoArea}>
-          <View style={[styles.logoCircle, { backgroundColor: colors.primary + '22' }]}>
-            <MaterialCommunityIcons name="router-wireless" size={52} color={colors.primary} />
-          </View>
-          <Text style={[styles.appName, { color: colors.foreground }]}>HotSpot Manager</Text>
-          <Text style={[styles.appTagline, { color: colors.mutedForeground }]}>
-            MikroTik · Tickets · Bluetooth
-          </Text>
+          <Image
+            source={PASSNET_LOGO}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
 
         {/* Card */}
@@ -294,24 +295,10 @@ const styles = StyleSheet.create({
   },
   logoArea: {
     alignItems: 'center',
-    gap: 12,
   },
-  logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  appName: {
-    fontSize: 26,
-    fontFamily: 'Inter_700Bold',
-    letterSpacing: -0.5,
-  },
-  appTagline: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    letterSpacing: 0.5,
+  logoImage: {
+    width: 260,
+    height: 130,
   },
   card: {
     borderRadius: 20,
