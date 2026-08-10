@@ -1,17 +1,17 @@
 {
   "expo": {
-    "name": "tu-ticket-wifi",
+    "name": "PASSNET WIFI",
     "slug": "tuticketwifi",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/passnet-icon.png",
     "scheme": "tuticketwifi",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/icon.png",
+      "image": "./assets/images/passnet-splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0A0F1E"
+      "backgroundColor": "#F4EFE6"
     },
     "ios": {
       "supportsTablet": false,
@@ -20,6 +20,10 @@
     "android": {
       "softwareKeyboardLayoutMode": "pan",
       "package": "com.tuticketwifi.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/passnet-icon.png",
+        "backgroundColor": "#F4EFE6"
+      },
       "permissions": [
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN",
@@ -29,7 +33,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/passnet-icon.png"
     },
     "plugins": [
       [
