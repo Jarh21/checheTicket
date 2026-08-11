@@ -27,6 +27,7 @@
     },
     "android": {
       "softwareKeyboardLayoutMode": "pan",
+      "usesCleartextTraffic": true,
       "package": "com.tuticketwifi.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/passnet-icon.png",
