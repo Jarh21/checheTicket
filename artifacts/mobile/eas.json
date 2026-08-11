@@ -6,12 +6,14 @@
   "build": {
     "preview": {
       "distribution": "internal",
+      "channel": "preview",
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
       }
     },
     "production": {
+      "channel": "production",
       "android": {
         "buildType": "app-bundle"
       }

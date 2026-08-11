@@ -8,6 +8,14 @@
     "scheme": "tuticketwifi",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "updates": {
+      "url": "https://u.expo.dev/7d28e904-3db1-4320-a9e6-6d18ba90b8ab",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "splash": {
       "image": "./assets/images/passnet-splash.png",
       "resizeMode": "contain",
