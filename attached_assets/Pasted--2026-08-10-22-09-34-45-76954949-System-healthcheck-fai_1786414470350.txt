@@ -1,0 +1,81 @@
+
+2026-08-10 22:09:34.45
+76954949
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-08-10 22:09:34.46
+76954949
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-08-10 22:09:34.47
+76954949
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-08-10 22:09:34.52
+76954949
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-08-10 22:09:34.68
+76954949
+System
+healthcheck failed error=healthcheck /api returned status 500
+
+2026-08-10 22:09:34.87
+76954949
+System
+healthcheck failed error=healthcheck / returned status 500
+
+2026-08-10 22:09:34.94
+76954949
+User
+(node:20) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+
+2026-08-10 22:09:34.94
+76954949
+User
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+2026-08-10 22:09:48.74
+76954949
+User
+{"level":30,"time":1786414188745,"pid":20,"hostname":"localhost","req":{"id":9,"method":"GET","url":"/api/admin/device-auth-events"},"res":{"statusCode":304},"responseTime":55,"msg":"request completed"}
+
+2026-08-10 22:10:35.59
+76954949
+User
+{"level":30,"time":1786414235599,"pid":20,"hostname":"localhost","req":{"id":10,"method":"PATCH","url":"/api/admin/licenses/fb6ea261-ceac-41de-99a3-0a2616abbf9d"},"res":{"statusCode":200},"responseTime":147,"msg":"request completed"}
+
+2026-08-10 22:10:36.48
+76954949
+User
+{"level":30,"time":1786414236486,"pid":20,"hostname":"localhost","req":{"id":11,"method":"GET","url":"/api/admin/licenses"},"res":{"statusCode":200},"responseTime":13,"msg":"request completed"}
+
+2026-08-10 22:10:36.53
+76954949
+User
+{"level":30,"time":1786414236535,"pid":20,"hostname":"localhost","req":{"id":12,"method":"GET","url":"/api/admin/dashboard"},"res":{"statusCode":304},"responseTime":61,"msg":"request completed"}
+
+2026-08-10 22:12:23.77
+76954949
+User
+{"level":30,"time":1786414343779,"pid":20,"hostname":"localhost","req":{"id":13,"method":"PATCH","url":"/api/admin/licenses/fb6ea261-ceac-41de-99a3-0a2616abbf9d"},"res":{"statusCode":200},"responseTime":156,"msg":"request completed"}
+
+2026-08-10 22:12:24.10
+76954949
+User
+{"level":30,"time":1786414344104,"pid":20,"hostname":"localhost","req":{"id":14,"method":"GET","url":"/api/admin/licenses"},"res":{"statusCode":200},"responseTime":18,"msg":"request completed"}
+
+2026-08-10 22:12:24.68
+76954949
+User
+{"level":30,"time":1786414344680,"pid":20,"hostname":"localhost","req":{"id":15,"method":"GET","url":"/api/admin/dashboard"},"res":{"statusCode":304},"responseTime":24,"msg":"request completed"}
+
+
+2026-08-10 22:12:24.68
+76954949
+User
+{"level":30,"time":1786414344680,"pid":20,"hostname":"localhost","req":{"id":15,"method":"GET","url":"/api/admin/dashboard"},"res":{"statusCode":304},"responseTime":24,"msg":"request completed"}
