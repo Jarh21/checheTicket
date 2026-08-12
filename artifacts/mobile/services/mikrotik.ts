@@ -393,9 +393,12 @@ export async function uploadHotspotPortal(
     const existing = files.find((f) => candidateNames.includes(f.name));
 
     if (existing) {
-      // 2a. Update the existing file
+      // 2a. Update the existing file.
+      // RouterOS REST IDs look like "*6" — the asterisk must NOT be percent-encoded
+      // or the router returns 404. Only encode other special characters.
+      const rawId = existing['.id'].replace(/\*/g, '*');
       const patchRes = await fetchWithTimeout(
-        `${getBaseUrl(config)}/file/${encodeURIComponent(existing['.id'])}`,
+        `${getBaseUrl(config)}/file/${rawId}`,
         {
           method: 'PATCH',
           headers: {

@@ -49,7 +49,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!session) return;
     const interval = setInterval(() => {
       void restoreLicenseSession().then((refreshed) => {
-        setSession(refreshed);
+        // Only update session when we get a valid response back.
+        // If the server is unreachable (no internet / on local WiFi),
+        // restoreLicenseSession returns null without removing the token,
+        // so we keep the current session alive instead of logging the user out.
+        if (refreshed) setSession(refreshed);
       });
     }, 5 * 60 * 1000);
     return () => clearInterval(interval);

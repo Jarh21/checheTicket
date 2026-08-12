@@ -38,8 +38,14 @@ export async function restoreLicenseSession() {
   if (!token) return null;
   try {
     return await getLicenseSession();
-  } catch {
-    await removeItem(STORAGE_KEYS.LICENSE_TOKEN);
+  } catch (error) {
+    // Only invalidate the stored token on explicit auth rejections (401/403).
+    // Network errors (server unreachable, no internet) must NOT remove the
+    // token so the user can still use biometric login when back online.
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('401') || msg.includes('403')) {
+      await removeItem(STORAGE_KEYS.LICENSE_TOKEN);
+    }
     return null;
   }
 }
