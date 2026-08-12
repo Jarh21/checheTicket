@@ -64,9 +64,10 @@ export async function testConnection(config: MikroTikConfig): Promise<TestResult
   } catch (error: unknown) {
     const e = error as Error;
     if (e.name === 'AbortError') {
-      return { success: false, message: 'Tiempo de conexión agotado (6s)' };
+      return { success: false, message: 'Tiempo agotado (6s) — verifica IP y que el celular esté en la red del router' };
     }
-    return { success: false, message: 'No se pudo conectar al router' };
+    const detail = e.message || e.name || String(error);
+    return { success: false, message: `Error: ${detail}` };
   }
 }
 
