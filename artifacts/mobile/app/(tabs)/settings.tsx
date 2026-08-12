@@ -539,6 +539,9 @@ export default function SettingsScreen() {
       <Text style={[styles.appInfo, { color: colors.mutedForeground }]}>
         HotSpot Manager · MikroTik RouterOS v7 · REST API
       </Text>
+      <Text style={[styles.appVersion, { color: colors.mutedForeground }]}>
+        Versión 1.0.1
+      </Text>
     </KeyboardAwareScrollViewCompat>
   );
 }
@@ -659,7 +662,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: 'Inter_400Regular',
     marginTop: 4,
+    marginBottom: 2,
+  },
+  appVersion: {
+    textAlign: 'center',
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
     marginBottom: 8,
+    opacity: 0.6,
   },
   colorRow: {
     flexDirection: 'row',
