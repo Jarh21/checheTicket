@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -13,14 +13,14 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-
-const PASSNET_LOGO = require('@/assets/images/passnet-logo.jpeg');
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { getItem, setItem, STORAGE_KEYS } from '@/services/storage';
+
+const PASSNET_LOGO = require('@/assets/images/passnet-logo-new.png');
 
 export default function LoginScreen() {
   const colors = useColors();
@@ -34,6 +34,7 @@ export default function LoginScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [biometricReady, setBiometricReady] = useState(false);
   const [biometricLoading, setBiometricLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
   const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -60,7 +61,8 @@ export default function LoginScreen() {
   if (isLoading) {
     return (
       <View style={[styles.loading, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={colors.primary} size="large" />
+        <Image source={PASSNET_LOGO} style={styles.loadingLogo} resizeMode="contain" />
+        <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 32 }} />
       </View>
     );
   }
@@ -78,36 +80,39 @@ export default function LoginScreen() {
 
     setSubmitting(true);
     const result = await login(email, password);
+    setSubmitting(false);
+
     if (!result.ok) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       setError(result.message ?? 'No se pudo iniciar sesión');
-      setPassword('');
-      setSubmitting(false);
       return;
     }
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setSubmitting(false);
 
-    // Offer biometric after first successful login
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
     try {
       const hardware = await LocalAuthentication.hasHardwareAsync();
       const enrolled = await LocalAuthentication.isEnrolledAsync();
-      const alreadyEnabled = await getItem<boolean>(STORAGE_KEYS.BIOMETRIC_ENABLED);
-      if (hardware && enrolled && !alreadyEnabled) {
-        Alert.alert(
-          'Inicio rápido con huella',
-          '¿Deseas habilitar el inicio de sesión con huella digital?',
-          [
-            { text: 'Ahora no', style: 'cancel' },
-            {
-              text: 'Habilitar',
-              onPress: async () => {
-                await setItem(STORAGE_KEYS.BIOMETRIC_ENABLED, true);
-                setBiometricReady(true);
-              },
-            },
-          ],
-        );
+      if (hardware && enrolled && !biometricReady) {
+        // Small delay to let navigation settle
+        setTimeout(() => {
+          import('react-native').then(({ Alert }) => {
+            Alert.alert(
+              'Inicio rápido con huella',
+              '¿Deseas habilitar el inicio de sesión con huella digital?',
+              [
+                { text: 'No', style: 'cancel' },
+                {
+                  text: 'Sí',
+                  onPress: async () => {
+                    await setItem(STORAGE_KEYS.BIOMETRIC_ENABLED, true);
+                    setBiometricReady(true);
+                  },
+                },
+              ],
+            );
+          });
+        }, 800);
       }
     } catch {
       // ignore
@@ -131,7 +136,6 @@ export default function LoginScreen() {
       if (!loginResult.ok) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         setError(loginResult.message ?? 'Sesión expirada');
-        // Disable biometric so user can re-enable after next login
         await setItem(STORAGE_KEYS.BIOMETRIC_ENABLED, false);
         setBiometricReady(false);
       } else {
@@ -149,26 +153,21 @@ export default function LoginScreen() {
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View
-        style={[
-          styles.inner,
-          {
-            paddingTop: insets.top + (Platform.OS === 'web' ? 67 : 40),
-            paddingBottom: insets.bottom + 40,
-          },
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 32 },
         ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Logo */}
+        {/* Logo — large, transparent PNG on oyster background */}
         <View style={styles.logoArea}>
-          <Image
-            source={PASSNET_LOGO}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
+          <Image source={PASSNET_LOGO} style={styles.logoImage} resizeMode="contain" />
         </View>
 
-        {/* Card */}
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {/* Login card */}
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
           <Text style={[styles.cardTitle, { color: colors.foreground }]}>
             Acceso de cliente
           </Text>
@@ -176,10 +175,19 @@ export default function LoginScreen() {
             Ingresa con la cuenta y licencia asignadas
           </Text>
 
+          {/* Email */}
           <View
             style={[
               styles.inputWrap,
-              { backgroundColor: colors.input, borderColor: error ? colors.destructive : colors.border },
+              {
+                backgroundColor: colors.input,
+                borderColor: focusedField === 'email'
+                  ? colors.primary
+                  : error
+                    ? colors.destructive
+                    : colors.border,
+                borderWidth: focusedField === 'email' ? 1.5 : 1,
+              },
             ]}
           >
             <Feather name="mail" size={18} color={colors.mutedForeground} style={styles.inputIcon} />
@@ -189,17 +197,29 @@ export default function LoginScreen() {
               placeholderTextColor={colors.mutedForeground}
               value={email}
               onChangeText={(t) => { setEmail(t); setError(''); }}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="email-address"
               returnKeyType="next"
+              onSubmitEditing={() => inputRef.current?.focus()}
             />
           </View>
 
+          {/* Password */}
           <View
             style={[
               styles.inputWrap,
-              { backgroundColor: colors.input, borderColor: error ? colors.destructive : colors.border },
+              {
+                backgroundColor: colors.input,
+                borderColor: focusedField === 'password'
+                  ? colors.primary
+                  : error
+                    ? colors.destructive
+                    : colors.border,
+                borderWidth: focusedField === 'password' ? 1.5 : 1,
+              },
             ]}
           >
             <Feather name="lock" size={18} color={colors.mutedForeground} style={styles.inputIcon} />
@@ -211,6 +231,8 @@ export default function LoginScreen() {
               secureTextEntry={!showPwd}
               value={password}
               onChangeText={(t) => { setPassword(t); setError(''); }}
+              onFocus={() => setFocusedField('password')}
+              onBlur={() => setFocusedField(null)}
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="done"
@@ -225,13 +247,13 @@ export default function LoginScreen() {
             <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
           ) : null}
 
-          {/* Submit button */}
+          {/* Ingresar button */}
           <Pressable
             onPress={handleSubmit}
             disabled={submitting}
             style={({ pressed }) => [
               styles.submitBtn,
-              { backgroundColor: colors.primary, opacity: pressed || submitting ? 0.8 : 1 },
+              { backgroundColor: colors.primary, opacity: pressed || submitting ? 0.82 : 1 },
             ]}
           >
             {submitting ? (
@@ -243,7 +265,7 @@ export default function LoginScreen() {
             )}
           </Pressable>
 
-          {/* Bottom row: biometric + forgot password */}
+          {/* Bottom row */}
           <View style={styles.bottomRow}>
             {biometricReady && (
               <Pressable
@@ -251,7 +273,7 @@ export default function LoginScreen() {
                 disabled={biometricLoading}
                 style={({ pressed }) => [
                   styles.biometricBtn,
-                  { borderColor: colors.border, opacity: pressed || biometricLoading ? 0.7 : 1 },
+                  { borderColor: colors.border, backgroundColor: colors.input, opacity: pressed || biometricLoading ? 0.7 : 1 },
                 ]}
               >
                 {biometricLoading ? (
@@ -273,7 +295,7 @@ export default function LoginScreen() {
             </Pressable>
           </View>
         </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -284,44 +306,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  loadingLogo: {
+    width: 260,
+    height: 200,
+  },
   container: {
     flex: 1,
   },
-  inner: {
-    flex: 1,
+  scroll: {
+    flexGrow: 1,
     paddingHorizontal: 24,
     justifyContent: 'center',
-    gap: 32,
+    gap: 36,
   },
   logoArea: {
     alignItems: 'center',
   },
   logoImage: {
-    width: 260,
-    height: 130,
+    width: 280,
+    height: 220,
   },
   card: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 24,
+    borderRadius: 24,
+    padding: 28,
     gap: 14,
+    shadowColor: '#1B2E4B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontFamily: 'Inter_700Bold',
   },
   cardSub: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-    marginTop: -8,
+    lineHeight: 20,
+    marginTop: -4,
   },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 14,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
   },
   inputIcon: {
     marginRight: 10,
@@ -337,20 +367,21 @@ const styles = StyleSheet.create({
     marginTop: -4,
   },
   submitBtn: {
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 15,
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 2,
   },
   submitText: {
     fontSize: 16,
     fontFamily: 'Inter_600SemiBold',
+    letterSpacing: 0.3,
   },
   bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: -4,
+    marginTop: -2,
   },
   biometricBtn: {
     width: 46,

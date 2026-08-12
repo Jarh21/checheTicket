@@ -17,7 +17,7 @@
       "policy": "appVersion"
     },
     "splash": {
-      "image": "./assets/images/passnet-splash.png",
+      "image": "./assets/images/passnet-logo-new.png",
       "resizeMode": "contain",
       "backgroundColor": "#F4EFE6"
     },

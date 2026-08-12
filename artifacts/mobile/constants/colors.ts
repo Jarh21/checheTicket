@@ -1,56 +1,56 @@
 /**
- * Dark tech/network theme for HotSpot Manager.
- * Both light and dark use the same dark palette — this is an admin tool.
+ * Blanco Ostra (Oyster White) theme for PASSNET WIFI.
+ * Warm off-white background, dark navy primary matching the brand logo.
  */
 
-const darkTheme = {
+const lightTheme = {
   // Legacy aliases
-  text: '#F9FAFB',
-  tint: '#00C2FF',
+  text: '#1B2E4B',
+  tint: '#1B3A6E',
 
   // Core surfaces
-  background: '#0A0F1E',
-  foreground: '#F9FAFB',
+  background: '#F4EFE6',
+  foreground: '#1B2E4B',
 
   // Cards / elevated surfaces
-  card: '#111827',
-  cardForeground: '#F9FAFB',
+  card: '#FFFFFF',
+  cardForeground: '#1B2E4B',
 
-  // Primary (cyan)
-  primary: '#00C2FF',
-  primaryForeground: '#0A0F1E',
+  // Primary (navy blue — matches PASSNET logo)
+  primary: '#1B3A6E',
+  primaryForeground: '#FFFFFF',
 
   // Secondary
-  secondary: '#1E293B',
-  secondaryForeground: '#94A3B8',
+  secondary: '#EDE8DF',
+  secondaryForeground: '#4A6080',
 
   // Muted
-  muted: '#1E293B',
-  mutedForeground: '#64748B',
+  muted: '#EDE8DF',
+  mutedForeground: '#7A6E62',
 
-  // Accent
-  accent: '#00C2FF',
-  accentForeground: '#0A0F1E',
+  // Accent (yellow from logo)
+  accent: '#F5A623',
+  accentForeground: '#1B2E4B',
 
   // Destructive
-  destructive: '#EF4444',
+  destructive: '#DC2626',
   destructiveForeground: '#FFFFFF',
 
   // Borders / inputs
-  border: '#1E293B',
-  input: '#1E293B',
+  border: '#DDD5C8',
+  input: '#EDE8DF',
 
-  // Extra semantic colors used in components
-  success: '#10B981',
+  // Extra semantic colors
+  success: '#16A34A',
   successForeground: '#FFFFFF',
-  warning: '#F59E0B',
+  warning: '#D97706',
   warningForeground: '#FFFFFF',
 };
 
 const colors = {
-  light: darkTheme,
-  dark: darkTheme,
-  radius: 12,
+  light: lightTheme,
+  dark: lightTheme, // single palette — oyster white for all modes
+  radius: 14,
 };
 
 export default colors;
