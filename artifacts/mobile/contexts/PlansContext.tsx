@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { getPlanProfileName, Plan } from '@/types';
 import { getItem, setItem, STORAGE_KEYS } from '@/services/storage';
 
@@ -66,6 +66,8 @@ const PlansContext = createContext<PlansContextType | undefined>(undefined);
 export function PlansProvider({ children }: { children: React.ReactNode }) {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Ref always holds the latest plans so async callbacks never use a stale closure
+  const plansRef = useRef<Plan[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -77,9 +79,11 @@ export function PlansProvider({ children }: { children: React.ReactNode }) {
           // Backward compat: plans stored before synced field was added are treated as synced
           synced: plan.synced ?? true,
         }));
+        plansRef.current = normalized;
         setPlans(normalized);
         await setItem(STORAGE_KEYS.PLANS, normalized);
       } else {
+        plansRef.current = DEFAULT_PLANS;
         setPlans(DEFAULT_PLANS);
         await setItem(STORAGE_KEYS.PLANS, DEFAULT_PLANS);
       }
@@ -88,6 +92,7 @@ export function PlansProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const save = useCallback(async (updated: Plan[]) => {
+    plansRef.current = updated;
     setPlans(updated);
     await setItem(STORAGE_KEYS.PLANS, updated);
   }, []);
@@ -100,13 +105,13 @@ export function PlansProvider({ children }: { children: React.ReactNode }) {
       mikrotikProfile: plan.mikrotikProfile || getPlanProfileName(newId),
       synced: false,
     };
-    await save([...plans, created]);
+    await save([...plansRef.current, created]);
     return created;
   }
 
   async function updatePlan(id: string, partial: Partial<Omit<Plan, 'id'>>): Promise<void> {
     await save(
-      plans.map((p) =>
+      plansRef.current.map((p) =>
         p.id === id
           ? { ...p, ...partial, mikrotikProfile: partial.mikrotikProfile || p.mikrotikProfile || getPlanProfileName(id) }
           : p,
@@ -115,7 +120,7 @@ export function PlansProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function deletePlan(id: string): Promise<void> {
-    await save(plans.filter((p) => p.id !== id));
+    await save(plansRef.current.filter((p) => p.id !== id));
   }
 
   return (
