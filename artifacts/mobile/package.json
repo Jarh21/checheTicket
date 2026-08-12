@@ -7,13 +7,15 @@
     "dev": "EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV_DOMAIN EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_REPL_ID=$REPL_ID REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_DEV_DOMAIN pnpm exec expo start --localhost --port $PORT",
     "build": "node scripts/build.js",
     "serve": "node server/serve.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@expo-google-fonts/inter": "^0.4.0",
     "@expo/cli": "54.0.23",
-    "@expo/config-plugins": "^54.0.5",
+    "@expo/config-plugins": "~54.0.5",
     "@expo/ngrok": "^4.1.0",
     "@expo/vector-icons": "^15.0.3",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -57,12 +59,14 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
-    "expo-build-properties": "^57.0.10",
+    "expo": "~54.0.36",
     "expo-file-system": "^19.0.23",
     "expo-local-authentication": "~17.0.8",
     "expo-print": "^15.0.8",
     "expo-sharing": "^14.0.8",
     "expo-updates": "~29.0.19",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
     "rn-bluetooth-classic-printer": "0.2.1"
   }
 }
