@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -18,7 +19,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { getItem, setItem, STORAGE_KEYS } from '@/services/storage';
-import { PassnetLogo } from '@/components/PassnetLogo';
+
+const PASSNET_LOGO = require('@/assets/images/passnet-logo-clean.png');
 
 export default function LoginScreen() {
   const colors = useColors();
@@ -59,7 +61,7 @@ export default function LoginScreen() {
   if (isLoading) {
     return (
       <View style={[styles.loading, { backgroundColor: colors.background }]}>
-        <PassnetLogo size="large" />
+        <Image source={PASSNET_LOGO} style={styles.logoImage} resizeMode="contain" />
         <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 32 }} />
       </View>
     );
@@ -159,9 +161,9 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Logo — native component, no image transparency issues */}
+        {/* Logo — clean PNG sin fondo */}
         <View style={styles.logoArea}>
-          <PassnetLogo size="large" />
+          <Image source={PASSNET_LOGO} style={styles.logoImage} resizeMode="contain" />
         </View>
 
         {/* Login card */}
@@ -315,6 +317,10 @@ const styles = StyleSheet.create({
   },
   logoArea: {
     alignItems: 'center',
+  },
+  logoImage: {
+    width: 280,
+    height: 182, // 603×392 ratio → 280×182
   },
   card: {
     borderRadius: 24,
