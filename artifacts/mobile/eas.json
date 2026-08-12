@@ -7,7 +7,11 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
+      "cache": {
+        "disabled": true
+      },
       "android": {
+        "image": "ubuntu-24.04-jdk-17-ndk-r27b",
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease"
       }

@@ -52,6 +52,18 @@
           "origin": "https://replit.com/"
         }
       ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.24"
+          }
+        }
+      ],
+      [
+        "./plugins/withGradleVersion",
+        { "gradleVersion": "8.10.2" }
+      ],
       "expo-font",
       "expo-web-browser",
       "./plugins/withCleartextTraffic"
