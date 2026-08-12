@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,8 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { getItem, setItem, STORAGE_KEYS } from '@/services/storage';
-
-const PASSNET_LOGO = require('@/assets/images/passnet-logo-new.png');
+import { PassnetLogo } from '@/components/PassnetLogo';
 
 export default function LoginScreen() {
   const colors = useColors();
@@ -61,7 +59,7 @@ export default function LoginScreen() {
   if (isLoading) {
     return (
       <View style={[styles.loading, { backgroundColor: colors.background }]}>
-        <Image source={PASSNET_LOGO} style={styles.loadingLogo} resizeMode="contain" />
+        <PassnetLogo size="large" />
         <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 32 }} />
       </View>
     );
@@ -161,9 +159,9 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Logo — large, transparent PNG on oyster background */}
+        {/* Logo — native component, no image transparency issues */}
         <View style={styles.logoArea}>
-          <Image source={PASSNET_LOGO} style={styles.logoImage} resizeMode="contain" />
+          <PassnetLogo size="large" />
         </View>
 
         {/* Login card */}
@@ -306,10 +304,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loadingLogo: {
-    width: 260,
-    height: 200,
-  },
   container: {
     flex: 1,
   },
@@ -322,14 +316,11 @@ const styles = StyleSheet.create({
   logoArea: {
     alignItems: 'center',
   },
-  logoImage: {
-    width: 280,
-    height: 220,
-  },
   card: {
     borderRadius: 24,
     padding: 28,
     gap: 14,
+    overflow: 'hidden',
     shadowColor: '#1B2E4B',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
