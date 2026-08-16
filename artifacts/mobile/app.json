@@ -58,7 +58,11 @@
       ],
       "expo-font",
       "expo-web-browser",
-      "./plugins/withCleartextTraffic"
+      "./plugins/withCleartextTraffic",
+      [
+        "./plugins/withAndroidSdkVersions",
+        { "compileSdkVersion": 35, "targetSdkVersion": 35, "minSdkVersion": 24 }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
