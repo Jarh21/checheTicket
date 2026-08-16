@@ -6,3 +6,4 @@
 - [Bluetooth thermal printing](bluetooth-printer.md) — direct Android ticket printing uses Bluetooth Classic ESC/POS and requires a custom APK; Expo Go only previews the UI.
 - [Central license authority](license-platform.md) — mobile access depends on server-validated licenses, sessions, and device limits; local time must never decide expiry.
 - [Production publish requirements](production-publish.md) — multi-artifact publishing needs production admin secrets and every configured health path must return 200.
+- [Native Kotlin variant](passnet-native-kotlin.md) — the non-Expo PASSNET WIFI target is Kotlin/Compose with Gradle APK/AAB and direct RouterOS/Bluetooth access.
