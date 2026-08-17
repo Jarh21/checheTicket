@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark background palette -->
+    <color name="background">#0D0D0D</color>
+    <color name="surface">#1A1A1A</color>
+    <color name="surface_variant">#252525</color>
+
+    <!-- PASSNET red brand -->
+    <color name="primary">#E53935</color>
+    <color name="primary_dark">#B71C1C</color>
+    <color name="primary_container">#4A1010</color>
+
+    <!-- Text -->
+    <color name="on_background">#F5F5F5</color>
+    <color name="on_surface">#EEEEEE</color>
+    <color name="on_surface_variant">#AAAAAA</color>
+
+    <!-- Semantic -->
+    <color name="success">#4CAF50</color>
+    <color name="warning">#FFC107</color>
+    <color name="error">#EF5350</color>
+</resources>

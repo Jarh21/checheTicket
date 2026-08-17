@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PASSNET WIFI</string>
+
+    <!-- Navigation tabs -->
+    <string name="tab_dashboard">Panel</string>
+    <string name="tab_plans">Planes</string>
+    <string name="tab_history">Historial</string>
+    <string name="tab_settings">Ajustes</string>
+
+    <!-- Auth -->
+    <string name="label_email">Correo electrónico</string>
+    <string name="label_password">Contraseña</string>
+    <string name="btn_login">Iniciar sesión</string>
+    <string name="btn_forgot_password">¿Olvidaste tu contraseña?</string>
+    <string name="btn_logout">Cerrar sesión</string>
+
+    <!-- MikroTik -->
+    <string name="label_router_ip">IP del router</string>
+    <string name="label_router_user">Usuario MikroTik</string>
+    <string name="label_router_password">Contraseña MikroTik</string>
+    <string name="label_hotspot_server">Servidor hotspot</string>
+    <string name="label_wifi_name">Nombre de la red WiFi</string>
+    <string name="btn_test_connection">Probar conexión</string>
+
+    <!-- Ticket -->
+    <string name="btn_generate_ticket">Generar ticket</string>
+    <string name="label_username">Usuario</string>
+    <string name="label_ticket_password">Clave</string>
+
+    <!-- Printer -->
+    <string name="btn_print_bluetooth">Imprimir Bluetooth</string>
+    <string name="btn_share">Compartir</string>
+    <string name="btn_print_system">Imprimir</string>
+
+    <!-- General -->
+    <string name="btn_save">Guardar</string>
+    <string name="btn_cancel">Cancelar</string>
+    <string name="btn_delete">Eliminar</string>
+    <string name="btn_retry">Reintentar</string>
+    <string name="error_generic">Ocurrió un error. Intenta de nuevo.</string>
+    <string name="error_no_connection">Sin conexión con el servidor</string>
+    <string name="loading">Cargando\u2026</string>
+</resources>

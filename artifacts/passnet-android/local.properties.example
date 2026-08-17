@@ -1,0 +1,19 @@
+# Copy this file to local.properties and fill in your values.
+# local.properties is NOT committed to version control.
+
+# URL of the PASSNET WIFI license API server
+# For development (Android emulator pointing to your computer):
+#   PASSNET_API_BASE_URL=http://10.0.2.2:5000
+# For development on a physical device (replace with your computer's LAN IP):
+#   PASSNET_API_BASE_URL=http://192.168.1.50:5000
+# For production:
+PASSNET_API_BASE_URL=https://your-api-server.repl.co
+
+# Android SDK location (Android Studio sets this automatically)
+sdk.dir=/Users/youruser/Library/Android/sdk
+
+# Release signing (only needed for release builds / AAB)
+# KEYSTORE_PATH=release.jks
+# KEY_ALIAS=passnet
+# KEYSTORE_PASSWORD=changeme
+# KEY_PASSWORD=changeme
